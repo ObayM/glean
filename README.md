@@ -24,7 +24,7 @@ You'll need the official [Anki desktop app](https://apps.ankiweb.net/) with the 
 
 The fastest way in:
 
-1. Clone or [download](https://github.com/ObayM/glean/archive/refs/heads/main.zip) this repo.
+1. Clone this repo, or grab the [latest release zip](https://github.com/ObayM/glean/releases/latest/download/glean.zip).
 2. Open `chrome://extensions`, flip on **Developer mode** (top right), and click **Load unpacked**.
 3. Select this repository's folder.
 
