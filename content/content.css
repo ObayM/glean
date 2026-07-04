@@ -1,0 +1,23 @@
+#glean-overlay-host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  z-index: 2147483647;
+  pointer-events: none;
+  font-size: 16px;
+  line-height: 1.5;
+  direction: ltr;
+  text-align: left;
+  color: initial;
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+#glean-overlay-host.glean-active {
+  pointer-events: auto;
+}

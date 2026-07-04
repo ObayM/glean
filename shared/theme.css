@@ -1,0 +1,83 @@
+@property --displace-scale {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 15;
+}
+
+@property --specular-constant {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1.0;
+}
+
+:root {
+  --neutral-primary: #F4F5F6;
+  --neutral-primary-soft: rgba(255, 255, 255, 0.5);
+  --neutral-primary-medium: rgba(255, 255, 255, 0.35);
+  --neutral-primary-strong: rgba(255, 255, 255, 0.6);
+
+  --brand: #007AFF;
+  --brand-soft: rgba(0, 122, 255, 0.08);
+  --brand-softer: rgba(0, 122, 255, 0.04);
+  --brand-medium: rgba(0, 122, 255, 0.12);
+  --brand-strong: #0062CC;
+
+  --success: #34C759;
+  --success-soft: rgba(52, 199, 89, 0.1);
+  --success-strong: #248A3D;
+
+  --danger: #FF3B30;
+  --danger-soft: rgba(255, 59, 48, 0.1);
+  --danger-strong: #D1241C;
+
+  --warning: #FF9500;
+  --warning-soft: rgba(255, 149, 0, 0.1);
+  --warning-strong: #D67D00;
+
+  --heading: #1C1C1E;
+  --body: #3A3A3C;
+  --body-subtle: #8E8E93;
+  --fg-disabled: #AEAEB2;
+  --disabled: rgba(0, 0, 0, 0.04);
+
+  --border-default: rgba(255, 255, 255, 0.4);
+  --border-default-medium: rgba(0, 0, 0, 0.06);
+  --border-brand: rgba(0, 122, 255, 0.2);
+
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-bg-hover: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-border-subtle: rgba(255, 255, 255, 0.25);
+
+  --radius-full: 9999px;
+}
+
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-bg) !important;
+  backdrop-filter: url(#liquid-refraction) blur(40px) saturate(210%) !important;
+  -webkit-backdrop-filter: url(#liquid-refraction) blur(40px) saturate(210%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-base) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+  --displace-scale: 15;
+  --specular-constant: 1.0;
+  transition: background 0.3s ease,
+              --displace-scale 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              --specular-constant 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.glass-panel:hover {
+  --displace-scale: 25;
+  --specular-constant: 1.4;
+}
+
+.glass-panel:active {
+  --displace-scale: 10;
+  --specular-constant: 0.8;
+}
+
+.glass-panel::before, .glass-panel::after {
+  display: none !important;
+}
