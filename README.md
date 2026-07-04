@@ -9,9 +9,6 @@
   <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ObayM/glean?style=flat&logo=github&label=Stars&color=yellow">
 </div>
 
-> [!CAUTION]
-> This is early days. Glean glues together a browser, a free community AI proxy, and a local Anki add-on - expect the occasional flaky definition, a dead audio source, or a card that doesn't quite land. The code is small and open, so if something looks wrong you can go read exactly what it did.
-
 ![demo](./assets/demo.gif)
 
 Glean doesn't touch Anki's files directly. It runs entirely as a Chrome extension: a content script watches for a highlighted or right-clicked word, hands the surrounding sentence to a background service worker, which asks an AI for a context-matched definition and example, grabs pronunciation audio from whichever source actually has the word, and posts the finished note to your local Anki through the [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on. Anki itself never has to know Glean exists.
@@ -35,7 +32,7 @@ npm install
 npm run build
 ```
 
-Then **Load unpacked** and point Chrome at `.output/chrome-mv3/` (not the repo root — the manifest is generated into `.output`). For live-reloading development, `npm run dev` instead.
+Then **Load unpacked** and point Chrome at `.output/chrome-mv3/` (not the repo root - the manifest gets generated into `.output`). For live-reloading development, run `npm run dev` instead.
 
 Then, in Anki:
 
@@ -54,12 +51,12 @@ Hack Club AI keys are free but rate-limited and occasionally slow to provision -
 
 ## Development
 
-Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run dev` starts a live-reloading dev build; `npm run build` produces `.output/chrome-mv3/`; `npm run check` runs the type + Svelte diagnostics (kept at zero). WXT generates the manifest, so you won't find one in the repo root — it lands in `.output`. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
+Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run dev` starts a live-reloading dev build, `npm run build` produces `.output/chrome-mv3/`, and `npm run check` runs the type and Svelte diagnostics (kept at zero). WXT generates the manifest, so you won't find one in the repo root - it lands in `.output`. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
 
 ## Other browsers
 
 > [!NOTE]
-> Chrome and Chromium-based browsers (Edge, Brave, Arc) are the tested target. Since the move to WXT there's now a Firefox build target too — `npm run build:firefox` — but it's not yet verified end-to-end, so treat it as experimental. PRs welcome. Safari is a bigger lift and isn't currently planned.
+> Chrome and the Chromium-based browsers (Edge, Brave, Arc, and so on) are the tested target. Since moving to WXT there's now a Firefox build too - `npm run build:firefox` - but it isn't verified end to end yet, so treat it as experimental for now. PRs welcome. Safari is a much bigger lift and isn't currently planned.
 
 ## Customization
 
