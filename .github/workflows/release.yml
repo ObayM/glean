@@ -10,6 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,17 +22,25 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+      - run: npm run build:firefox
 
-      - name: package glean.zip
-        run: cd .output/chrome-mv3 && zip -r ../../glean.zip . && cd -
+      - name: package zips
+        run: |
+          cd .output/chrome-mv3 && zip -r ../../glean.zip . && cd -
+          cd .output/firefox-mv2 && zip -r ../../glean-firefox-experimental.zip . && cd -
 
       - name: read version
         id: v
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.v.outputs.version }}
-          name: v${{ steps.v.outputs.version }}
-          files: glean.zip
-          fail_on_unmatched_files: true
+      - name: publish release
+        run: |
+          TAG="v${{ steps.v.outputs.version }}"
+          ASSETS="glean.zip glean-firefox-experimental.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" $ASSETS --clobber
+          else
+            gh release create "$TAG" $ASSETS \
+              --title "$TAG" \
+              --notes "Automated build from ${{ github.sha }}. Firefox zip is experimental (audio not verified)."
+          fi
