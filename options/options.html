@@ -32,24 +32,61 @@
 
     <main class="settings-panel">
         <div class="settings-card glass-panel">
-          <h2><i class="fa-solid fa-key"></i> AI and Dictionary API Keys</h2>
+          <h2><i class="fa-solid fa-robot"></i> AI Provider</h2>
 
           <div class="form-group">
-            <div class="label-row">
-              <label for="input-api-key">Hack Club AI API Key <span class="required">*</span></label>
-              <a href="https://ai.hackclub.com/dashboard" target="_blank" class="help-link">Get Free Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+            <label for="select-llm-provider">Provider</label>
+            <select id="select-llm-provider">
+              <option value="hackclub">Hack Club AI (Free)</option>
+              <option value="openrouter">OpenRouter (Bring your own key)</option>
+            </select>
+          </div>
+
+          <div id="provider-fields-hackclub" class="provider-fields">
+            <div class="form-group">
+              <div class="label-row">
+                <label for="input-hackclub-key">Hack Club AI API Key <span class="required">*</span></label>
+                <a href="https://ai.hackclub.com/dashboard" target="_blank" class="help-link">Get Free Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+              </div>
+              <div class="input-wrapper">
+                <input type="password" id="input-hackclub-key" placeholder="paste your hc_... key here">
+                <button type="button" id="btn-toggle-hackclub-key" class="toggle-password-btn" title="Show key"><i class="fa-solid fa-eye"></i></button>
+              </div>
             </div>
-            <div class="input-wrapper">
-              <input type="password" id="input-api-key" placeholder="paste your hc_... key here">
-              <button type="button" id="btn-toggle-api-key" class="toggle-password-btn" title="Show key"><i class="fa-solid fa-eye"></i></button>
-            </div>
-            <div class="validation-row">
-              <button type="button" id="btn-test-api-key" class="secondary-button">Test API Key</button>
-              <span id="api-key-status" class="status-msg"></span>
+            <div class="form-group">
+              <label for="input-hackclub-model">Model</label>
+              <input type="text" id="input-hackclub-model" placeholder="qwen/qwen3-32b">
+              <span class="field-hint">Any model Hack Club's proxy supports. The default works for most people.</span>
             </div>
           </div>
 
-          <hr class="card-divider">
+          <div id="provider-fields-openrouter" class="provider-fields hidden">
+            <div class="form-group">
+              <div class="label-row">
+                <label for="input-openrouter-key">OpenRouter API Key <span class="required">*</span></label>
+                <a href="https://openrouter.ai/keys" target="_blank" class="help-link">Get Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+              </div>
+              <div class="input-wrapper">
+                <input type="password" id="input-openrouter-key" placeholder="paste your sk-or-... key here">
+                <button type="button" id="btn-toggle-openrouter-key" class="toggle-password-btn" title="Show key"><i class="fa-solid fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-openrouter-model">Model</label>
+              <input type="text" id="input-openrouter-model" placeholder="meta-llama/llama-3.3-70b-instruct:free">
+              <span class="field-hint">Any <a href="https://openrouter.ai/models" target="_blank">OpenRouter model ID</a> — free-tier ones end in <code>:free</code>.</span>
+            </div>
+          </div>
+
+          <div class="validation-row">
+            <button type="button" id="btn-test-llm-key" class="secondary-button">Test API Key</button>
+            <span id="llm-key-status" class="status-msg"></span>
+          </div>
+        </div>
+
+        <div class="settings-card glass-panel">
+          <h2><i class="fa-solid fa-volume-high"></i> Pronunciation Audio</h2>
+
           <div class="form-group">
             <div class="label-row">
               <label for="input-mw-key">Merriam-Webster Key <span class="optional">(optional)</span></label>
@@ -108,6 +145,6 @@
   </div>
 
   <script src="../shared/liquid-glass.js"></script>
-  <script src="options.js"></script>
+  <script type="module" src="options.js"></script>
 </body>
 </html>

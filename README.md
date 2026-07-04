@@ -58,12 +58,14 @@ Everything here is vanilla JavaScript - no bundler, no framework, no `node_modul
 
 Open the extension's options page (`chrome://extensions` > Glean > Details > Extension options) to manage your API keys and target deck. Everything is stored locally in `chrome.storage.local` - there's no account, no sync, and no server keeping a copy of your words.
 
+Hack Club AI is the default because it's free and needs no setup beyond an email, but if you'd rather bring your own key, switch **AI Provider** to **OpenRouter** on the options page and paste in an [OpenRouter](https://openrouter.ai/keys) key instead. Both providers let you type in any model ID they support (there's a sensible default pre-filled for each, so you don't have to) - OpenRouter in particular has a bunch of free-tier models (their IDs end in `:free`) if you want to experiment without spending anything.
+
 If you want to change how the actual flashcard looks in Anki, that lives in one place: `CARD_CSS`, `CARD_FRONT`, and `CARD_BACK` in `lib/anki-connect.js`. Edit those, reload the extension, and delete the existing **Glean Vocab** note type in Anki so it gets recreated with your changes - Glean only creates it once and won't overwrite an existing one.
 
 ## Credits
 
 - [Anki](https://apps.ankiweb.net/) and [AnkiConnect](https://foosoft.net/projects/anki-connect/) for making a local flashcard API possible at all.
-- [Hack Club AI](https://ai.hackclub.com/) for a free, no-nonsense LLM proxy.
+- [Hack Club AI](https://ai.hackclub.com/) for a free, no-nonsense LLM proxy, and [OpenRouter](https://openrouter.ai/) for the bring-your-own-key alternative.
 - [Free Dictionary API](https://dictionaryapi.dev/) and [Merriam-Webster](https://dictionaryapi.com/) for pronunciation audio.
 - Claude for cleaning up the code and generally being a good assistant.
 

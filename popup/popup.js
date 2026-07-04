@@ -24,12 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function refreshUI() {
     chrome.storage.local.get({
-      apiKey: '',
+      llmProvider: 'hackclub',
+      hackclubApiKey: '',
+      openrouterApiKey: '',
       deckName: 'Glean',
       recentWords: [],
       stats: { todayCount: 0, totalCount: 0, todayDate: '' }
     }, (items) => {
-      if (!items.apiKey) {
+      const activeApiKey = items.llmProvider === 'openrouter' ? items.openrouterApiKey : items.hackclubApiKey;
+      if (!activeApiKey) {
         setupPrompt.classList.remove('hidden');
       } else {
         setupPrompt.classList.add('hidden');

@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chrome.runtime.sendMessage({
       type: 'TEST_API_KEY',
-      payload: { apiKey: key }
+      payload: { provider: 'hackclub', apiKey: key }
     }, (response) => {
       btnVerifyKey.disabled = false;
       if (chrome.runtime.lastError) {
@@ -80,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatus(apiVerifyStatus, 'Verification successful! API Key saved.', 'success');
         hasVerifiedApiKey = true;
         btnNextStep2.disabled = false;
-        chrome.storage.local.set({ apiKey: key });
+        chrome.storage.local.set({ llmProvider: 'hackclub', hackclubApiKey: key });
       } else {
-        const errorMsg = response?.error || 'Invalid API Key. Please verify and try again.';
+        const errorMsg = response?.data?.error || response?.error || 'Invalid API Key. Please verify and try again.';
         updateStatus(apiVerifyStatus, `Verification failed: ${errorMsg}`, 'error');
         hasVerifiedApiKey = false;
         btnNextStep2.disabled = true;

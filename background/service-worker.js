@@ -6,30 +6,48 @@ import {
   addNote,
 } from '../lib/anki-connect.js';
 
-import { getWordData, testApiKey } from '../lib/llm-api.js';
+import { getWordData, testApiKey, getDefaultModel } from '../lib/llm-api.js';
 import { fetchAudio } from '../lib/audio-fetcher.js';
 
 const DEFAULT_DECK = 'Glean';
 const MODEL_NAME = 'Glean Vocab';
+const DEFAULT_PROVIDER = 'hackclub';
 
 async function getSettings() {
   return new Promise((resolve) => {
     chrome.storage.local.get(
-      { apiKey: '', mwKey: '', deckName: DEFAULT_DECK },
+      {
+        llmProvider: DEFAULT_PROVIDER,
+        hackclubApiKey: '',
+        hackclubModel: '',
+        openrouterApiKey: '',
+        openrouterModel: '',
+        mwKey: '',
+        deckName: DEFAULT_DECK,
+      },
       (result) => resolve(result)
     );
   });
 }
 
+function activeProviderCredentials(settings) {
+  const provider = settings.llmProvider || DEFAULT_PROVIDER;
+  const apiKey = provider === 'openrouter' ? settings.openrouterApiKey : settings.hackclubApiKey;
+  const model = (provider === 'openrouter' ? settings.openrouterModel : settings.hackclubModel) || getDefaultModel(provider);
+  return { provider, apiKey, model };
+}
+
 async function handleProcessWord({ word, sentence, pageUrl }) {
   const settings = await getSettings();
+  const { provider, apiKey, model } = activeProviderCredentials(settings);
 
-  if (!settings.apiKey) {
-    throw new Error('API key not configured. Please set your Hack Club AI key in the extension settings.');
+  if (!apiKey) {
+    const providerLabel = provider === 'openrouter' ? 'OpenRouter' : 'Hack Club AI';
+    throw new Error(`API key not configured. Please set your ${providerLabel} key in the extension settings.`);
   }
 
   const [llmResult, audioResult] = await Promise.all([
-    getWordData(word, sentence, settings.apiKey),
+    getWordData(word, sentence, provider, apiKey, model),
     fetchAudio(word, settings.mwKey),
   ]);
 
@@ -147,8 +165,8 @@ async function handleCreateDeck({ deckName }) {
   return { success: true };
 }
 
-async function handleTestApiKey({ apiKey }) {
-  return testApiKey(apiKey);
+async function handleTestApiKey({ provider, apiKey, model }) {
+  return testApiKey(provider, apiKey, model);
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -214,7 +232,11 @@ chrome.runtime.onInstalled.addListener((details) => {
 
   if (details.reason === 'install') {
     chrome.storage.local.set({
-      apiKey: '',
+      llmProvider: DEFAULT_PROVIDER,
+      hackclubApiKey: '',
+      hackclubModel: '',
+      openrouterApiKey: '',
+      openrouterModel: '',
       mwKey: '',
       deckName: DEFAULT_DECK
     });

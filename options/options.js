@@ -1,16 +1,26 @@
+import { getDefaultModel } from '../lib/llm-api.js';
+
 document.addEventListener('DOMContentLoaded', () => {
-  const inputApiKey = document.getElementById('input-api-key');
+  const selectLlmProvider = document.getElementById('select-llm-provider');
+  const providerFieldsHackclub = document.getElementById('provider-fields-hackclub');
+  const providerFieldsOpenrouter = document.getElementById('provider-fields-openrouter');
+
+  const inputHackclubKey = document.getElementById('input-hackclub-key');
+  const inputHackclubModel = document.getElementById('input-hackclub-model');
+  const inputOpenrouterKey = document.getElementById('input-openrouter-key');
+  const inputOpenrouterModel = document.getElementById('input-openrouter-model');
   const inputMwKey = document.getElementById('input-mw-key');
   const selectDeck = document.getElementById('select-deck');
 
-  const btnToggleApiKey = document.getElementById('btn-toggle-api-key');
+  const btnToggleHackclubKey = document.getElementById('btn-toggle-hackclub-key');
+  const btnToggleOpenrouterKey = document.getElementById('btn-toggle-openrouter-key');
   const btnToggleMwKey = document.getElementById('btn-toggle-mw-key');
-  const btnTestApiKey = document.getElementById('btn-test-api-key');
+  const btnTestLlmKey = document.getElementById('btn-test-llm-key');
   const btnTestAnki = document.getElementById('btn-test-anki');
   const btnCreateDeck = document.getElementById('btn-create-deck');
   const btnReset = document.getElementById('btn-reset');
 
-  const apiKeyStatus = document.getElementById('api-key-status');
+  const llmKeyStatus = document.getElementById('llm-key-status');
   const ankiConnectionBadge = document.getElementById('anki-connection-badge');
   const saveToast = document.getElementById('save-toast');
 
@@ -21,9 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let activeToastTimeout = null;
   let autoSaveTimeout = null;
-
-  btnToggleApiKey.addEventListener('click', () => togglePasswordVisibility(inputApiKey, btnToggleApiKey));
-  btnToggleMwKey.addEventListener('click', () => togglePasswordVisibility(inputMwKey, btnToggleMwKey));
 
   function togglePasswordVisibility(inputEl, btnEl) {
     if (inputEl.type === 'password') {
@@ -37,15 +44,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  btnToggleHackclubKey.addEventListener('click', () => togglePasswordVisibility(inputHackclubKey, btnToggleHackclubKey));
+  btnToggleOpenrouterKey.addEventListener('click', () => togglePasswordVisibility(inputOpenrouterKey, btnToggleOpenrouterKey));
+  btnToggleMwKey.addEventListener('click', () => togglePasswordVisibility(inputMwKey, btnToggleMwKey));
+
+  function updateProviderVisibility() {
+    const provider = selectLlmProvider.value;
+    providerFieldsHackclub.classList.toggle('hidden', provider !== 'hackclub');
+    providerFieldsOpenrouter.classList.toggle('hidden', provider !== 'openrouter');
+  }
+
+  selectLlmProvider.addEventListener('change', () => {
+    updateProviderVisibility();
+    saveSettings(true);
+  });
+
   function loadSettings() {
     chrome.storage.local.get({
-      apiKey: '',
+      llmProvider: 'hackclub',
+      hackclubApiKey: '',
+      hackclubModel: '',
+      openrouterApiKey: '',
+      openrouterModel: '',
       mwKey: '',
       deckName: 'Glean'
     }, (items) => {
-      inputApiKey.value = items.apiKey;
+      selectLlmProvider.value = items.llmProvider;
+      inputHackclubKey.value = items.hackclubApiKey;
+      inputHackclubModel.value = items.hackclubModel || getDefaultModel('hackclub');
+      inputOpenrouterKey.value = items.openrouterApiKey;
+      inputOpenrouterModel.value = items.openrouterModel || getDefaultModel('openrouter');
       inputMwKey.value = items.mwKey;
 
+      updateProviderVisibility();
       testAnkiConnection();
       loadDeckOptions(items.deckName);
     });
@@ -53,7 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveSettings(showNotification = true) {
     const newSettings = {
-      apiKey: inputApiKey.value.trim(),
+      llmProvider: selectLlmProvider.value,
+      hackclubApiKey: inputHackclubKey.value.trim(),
+      hackclubModel: inputHackclubModel.value.trim(),
+      openrouterApiKey: inputOpenrouterKey.value.trim(),
+      openrouterModel: inputOpenrouterModel.value.trim(),
       mwKey: inputMwKey.value.trim(),
       deckName: selectDeck.value
     };
@@ -65,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const inputFields = [inputApiKey, inputMwKey];
+  const inputFields = [inputHackclubKey, inputHackclubModel, inputOpenrouterKey, inputOpenrouterModel, inputMwKey];
   inputFields.forEach(field => {
     field.addEventListener('input', () => {
       if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
@@ -83,32 +118,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2000);
   }
 
-  btnTestApiKey.addEventListener('click', () => {
-    const key = inputApiKey.value.trim();
+  btnTestLlmKey.addEventListener('click', () => {
+    const provider = selectLlmProvider.value;
+    const keyInput = provider === 'openrouter' ? inputOpenrouterKey : inputHackclubKey;
+    const modelInput = provider === 'openrouter' ? inputOpenrouterModel : inputHackclubModel;
+    const key = keyInput.value.trim();
+    const model = modelInput.value.trim() || getDefaultModel(provider);
+
     if (!key) {
-      updateStatus(apiKeyStatus, 'Please enter a key first.', 'error');
+      updateStatus(llmKeyStatus, 'Please enter a key first.', 'error');
       return;
     }
 
-    btnTestApiKey.disabled = true;
-    updateStatus(apiKeyStatus, 'Testing key...', 'checking');
+    btnTestLlmKey.disabled = true;
+    updateStatus(llmKeyStatus, 'Testing key...', 'checking');
 
     chrome.runtime.sendMessage({
       type: 'TEST_API_KEY',
-      payload: { apiKey: key }
+      payload: { provider, apiKey: key, model }
     }, (response) => {
-      btnTestApiKey.disabled = false;
+      btnTestLlmKey.disabled = false;
       if (chrome.runtime.lastError) {
-        updateStatus(apiKeyStatus, `Error: ${chrome.runtime.lastError.message}`, 'error');
+        updateStatus(llmKeyStatus, `Error: ${chrome.runtime.lastError.message}`, 'error');
         return;
       }
 
       if (response && response.success && response.data.valid) {
-        updateStatus(apiKeyStatus, 'API Key is valid.', 'success');
+        updateStatus(llmKeyStatus, 'API Key is valid.', 'success');
         saveSettings(false);
       } else {
-        const err = response?.error || 'Invalid API key.';
-        updateStatus(apiKeyStatus, `Verification failed: ${err}`, 'error');
+        const err = response?.data?.error || response?.error || 'Invalid API key.';
+        updateStatus(llmKeyStatus, `Verification failed: ${err}`, 'error');
       }
     });
   });

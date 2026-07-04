@@ -121,6 +121,12 @@ body {
   margin-bottom: 0;
 }
 
+.provider-fields {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .label-row {
   display: flex;
   justify-content: space-between;
@@ -230,6 +236,20 @@ input:focus, select:focus, .deck-select:focus {
   color: var(--body-subtle);
   line-height: 1.4;
   margin-top: 6px;
+}
+
+.field-hint code {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--brand-strong);
+}
+
+.field-hint a {
+  color: var(--brand);
+  font-weight: 550;
 }
 
 .validation-row {
