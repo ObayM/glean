@@ -22,13 +22,20 @@ This runs on Chrome and any other Chromium-based browser (Edge, Brave, Arc, and 
 
 You'll need the official [Anki desktop app](https://apps.ankiweb.net/) with the AnkiConnect add-on installed, since Glean talks to your existing Anki library rather than replacing it.
 
-The fastest way in:
+The fastest way in (no toolchain needed):
 
-1. Clone this repo, or grab the [latest release zip](https://github.com/ObayM/glean/releases/latest/download/glean.zip).
+1. Grab the [latest release zip](https://github.com/ObayM/glean/releases/latest/download/glean.zip) and unzip it.
 2. Open `chrome://extensions`, flip on **Developer mode** (top right), and click **Load unpacked**.
-3. Select this repository's folder.
+3. Select the unzipped folder.
 
-That's it, there's no build step, so "installing" and "installing from source" are the same thing here.
+Building from source instead? Glean is a [WXT](https://wxt.dev) + Svelte + TypeScript project, so it needs a one-time build:
+
+```bash
+npm install
+npm run build
+```
+
+Then **Load unpacked** and point Chrome at `.output/chrome-mv3/` (not the repo root — the manifest is generated into `.output`). For live-reloading development, `npm run dev` instead.
 
 Then, in Anki:
 
@@ -47,12 +54,12 @@ Hack Club AI keys are free but rate-limited and occasionally slow to provision -
 
 ## Development
 
-Everything here is vanilla JavaScript - no bundler, no framework, no `node_modules`. Edit a file, reload the extension from `chrome://extensions`, and (for content script changes) reload whatever page you're testing on. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
+Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run dev` starts a live-reloading dev build; `npm run build` produces `.output/chrome-mv3/`; `npm run check` runs the type + Svelte diagnostics (kept at zero). WXT generates the manifest, so you won't find one in the repo root — it lands in `.output`. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
 
-## Other browsers (unsupported for now)
+## Other browsers
 
 > [!NOTE]
-> Firefox uses a different, more limited Manifest V3 implementation and isn't supported yet - the service worker and offscreen-document APIs this extension relies on don't map cleanly. A port is plausible; PRs welcome. Safari is a much bigger lift and isn't currently planned.
+> Chrome and Chromium-based browsers (Edge, Brave, Arc) are the tested target. Since the move to WXT there's now a Firefox build target too — `npm run build:firefox` — but it's not yet verified end-to-end, so treat it as experimental. PRs welcome. Safari is a bigger lift and isn't currently planned.
 
 ## Customization
 
@@ -60,7 +67,7 @@ Open the extension's options page (`chrome://extensions` > Glean > Details > Ext
 
 Hack Club AI is the default because it's free and needs no setup beyond an email, but if you'd rather bring your own key, switch **AI Provider** to **OpenRouter** on the options page and paste in an [OpenRouter](https://openrouter.ai/keys) key instead. Both providers let you type in any model ID they support (there's a sensible default pre-filled for each, so you don't have to) - OpenRouter in particular has a bunch of free-tier models (their IDs end in `:free`) if you want to experiment without spending anything.
 
-If you want to change how the actual flashcard looks in Anki, that lives in one place: `CARD_CSS`, `CARD_FRONT`, and `CARD_BACK` in `lib/anki-connect.js`. Edit those, reload the extension, and delete the existing **Glean Vocab** note type in Anki so it gets recreated with your changes - Glean only creates it once and won't overwrite an existing one.
+If you want to change how the actual flashcard looks in Anki, that lives in one place: `CARD_CSS`, `CARD_FRONT`, and `CARD_BACK` in `lib/anki-connect.ts`. Edit those, rebuild (`npm run build`), reload the extension, and delete the existing **Glean Vocab** note type in Anki so it gets recreated with your changes - Glean only creates it once and won't overwrite an existing one.
 
 ## Credits
 

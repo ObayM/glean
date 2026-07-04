@@ -1,3 +1,10 @@
+# dependencies / build
+node_modules/
+.output/
+.wxt/
+stats.html
+*.zip
+
 .DS_Store
 Thumbs.db
 *.swp
