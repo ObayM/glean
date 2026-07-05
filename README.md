@@ -11,9 +11,17 @@
 
 ![demo](./assets/demo.gif)
 
-Glean doesn't touch Anki's files directly. It runs entirely as a Chrome extension: a content script watches for a highlighted or right-clicked word, hands the surrounding sentence to a background service worker, which asks an AI for a context-matched definition and example, grabs pronunciation audio from whichever source actually has the word, and posts the finished note to your local Anki through the [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on. Anki itself never has to know Glean exists.
+Glean doesn't touch Anki's files directly. It runs entirely as a Chrome extension: a content script watches for a highlighted or right-clicked word, hands the surrounding sentence to a background service worker, which detects the word's language and asks an AI for a context-matched definition and example in that language, grabs pronunciation audio from whichever source actually has the word, and posts the finished note to your local Anki through the [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on. Anki itself never has to know Glean exists.
 
 This runs on Chrome and any other Chromium-based browser (Edge, Brave, Arc, and so on) that supports Manifest V3. See below for the state of things elsewhere.
+
+## Languages
+
+Glean auto-detects the language of whatever word you look up and writes both the definition and the example sentence *in that language* - no translation, no picking a deck per language first. It's currently tuned for **English, German, French, Spanish, Italian, Portuguese, and Dutch**.
+
+Pronunciation follows the same detection: English goes through Merriam-Webster (if you've added a key) or the Free Dictionary API, and everything else gets native-language audio via Google Translate's TTS endpoint.
+
+English words also get a second field, **Meaning** - the AI picks the single best-fitting sense from the word's real [Free Dictionary API](https://dictionaryapi.dev/) entry, separate from the **Definition** field it writes itself for the specific sentence you looked the word up in. There's no equivalent free dictionary for the other six languages, so `Meaning` stays empty for those and you just get the AI's own definition and example.
 
 ## Installation
 
@@ -64,14 +72,15 @@ Open the extension's options page (`chrome://extensions` > Glean > Details > Ext
 
 Hack Club AI is the default because it's free and needs no setup beyond an email, but if you'd rather bring your own key, switch **AI Provider** to **OpenRouter** on the options page and paste in an [OpenRouter](https://openrouter.ai/keys) key instead. Both providers let you type in any model ID they support (there's a sensible default pre-filled for each, so you don't have to) - OpenRouter in particular has a bunch of free-tier models (their IDs end in `:free`) if you want to experiment without spending anything.
 
-If you want to change how the actual flashcard looks in Anki, that lives in one place: `CARD_CSS`, `CARD_FRONT`, and `CARD_BACK` in `lib/anki-connect.ts`. Edit those, rebuild (`npm run build`), reload the extension, and delete the existing **Glean Vocab** note type in Anki so it gets recreated with your changes - Glean only creates it once and won't overwrite an existing one.
+If you want to change how the actual flashcard looks in Anki, that lives in one place: `CARD_CSS`, `CARD_FRONT`, and `CARD_BACK` in `lib/anki-connect.ts`. Edit those, rebuild (`npm run build`), reload the extension, and delete the existing **Glean Vocab** note type in Anki so it gets recreated with your changes - Glean only creates it once and won't overwrite an existing one. New fields are the one exception: if you're upgrading from an older version of Glean, missing fields (like `Meaning`) get added to your existing note type automatically the next time you add a card - no manual recreation needed.
 
 ## Credits
 
 - [Anki](https://apps.ankiweb.net/) and [AnkiConnect](https://foosoft.net/projects/anki-connect/) for making a local flashcard API possible at all.
-- [Hack Club AI](https://ai.hackclub.com/) for a free, no-nonsense LLM proxy, and [OpenRouter](https://openrouter.ai/) for the bring-your-own-key alternative.
-- [Free Dictionary API](https://dictionaryapi.dev/) and [Merriam-Webster](https://dictionaryapi.com/) for pronunciation audio.
-- Claude for cleaning up the code and generally being a good assistant.
+- [Hack Club AI](https://ai.hackclub.com/) for a free AI (only for teens) and [OpenRouter](https://openrouter.ai/) for the bring-your-own-key alternative.
+- [Free Dictionary API](https://dictionaryapi.dev/) and [Merriam-Webster](https://dictionaryapi.com/) for pronunciation audio and (for English) dictionary-verified definitions.
+- Google Translate's text-to-speech endpoint for pronunciation audio in every supported language besides English.
+- Claude for being a good assistant.
 
 ## Legal
 
