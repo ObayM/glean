@@ -5,11 +5,28 @@
   import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { setSettings } from '../../lib/storage';
+  import type { LlmProvider } from '../../lib/types';
 
   const TOTAL_STEPS = 5;
   const CONFETTI_COLORS = ['#6366f1', '#a855f7', '#d946ef', '#10b981', '#3b82f6'];
 
+  const PROVIDER_INFO: Record<LlmProvider, { label: string; dashboardUrl: string; dashboardLabel: string; placeholder: string }> = {
+    hackclub: {
+      label: 'Hack Club AI',
+      dashboardUrl: 'https://ai.hackclub.com/dashboard',
+      dashboardLabel: 'Get Free API Key (For teens)',
+      placeholder: 'hc_...',
+    },
+    openrouter: {
+      label: 'OpenRouter',
+      dashboardUrl: 'https://openrouter.ai/keys',
+      dashboardLabel: 'Get OpenRouter API Key',
+      placeholder: 'sk-or-...',
+    },
+  };
+
   let currentStep = $state(0);
+  let llmProvider = $state<LlmProvider>('hackclub');
   let apiKey = $state('');
   let verifying = $state(false);
   let hasVerifiedApiKey = $state(false);
@@ -40,6 +57,14 @@
     if (index === 4) triggerConfetti();
   }
 
+  function selectProvider(next: LlmProvider) {
+    if (llmProvider === next) return;
+    llmProvider = next;
+    apiKey = '';
+    hasVerifiedApiKey = false;
+    apiStatus = null;
+  }
+
   async function verifyKey() {
     const key = apiKey.trim();
     if (!key) {
@@ -48,12 +73,16 @@
     }
     verifying = true;
     apiStatus = { msg: 'Verifying connection...', type: 'checking' };
-    const res = await sendMessage('TEST_API_KEY', { provider: 'hackclub', apiKey: key });
+    const res = await sendMessage('TEST_API_KEY', { provider: llmProvider, apiKey: key });
     verifying = false;
     if (res.ok && res.data.valid) {
       apiStatus = { msg: 'Verification successful! API Key saved.', type: 'success' };
       hasVerifiedApiKey = true;
-      await setSettings({ llmProvider: 'hackclub', hackclubApiKey: key });
+      await setSettings(
+        llmProvider === 'openrouter'
+          ? { llmProvider, openrouterApiKey: key }
+          : { llmProvider, hackclubApiKey: key }
+      );
     } else {
       const err = res.ok ? res.data.error : res.error.message;
       apiStatus = { msg: `Verification failed: ${err ?? 'Invalid API Key.'}`, type: 'error' };
@@ -136,13 +165,20 @@
     <section class="wizard-step" class:active={currentStep === 1}>
       <h2>Connect to AI Translation</h2>
       <p class="step-desc">Glean uses AI to translate words and write example sentences based on context. Get your free key in 30 seconds.</p>
+      <div class="form-group">
+        <label for="select-provider">AI Provider:</label>
+        <select id="select-provider" value={llmProvider} onchange={(e) => selectProvider(e.currentTarget.value as LlmProvider)}>
+          <option value="hackclub">Hack Club AI (Free, for teens)</option>
+          <option value="openrouter">OpenRouter (Bring your own key)</option>
+        </select>
+      </div>
       <div class="card-action-box">
-        <a href="https://ai.hackclub.com/dashboard" target="_blank" class="dashboard-btn">Get Free API Key (For teens)</a>
+        <a href={PROVIDER_INFO[llmProvider].dashboardUrl} target="_blank" class="dashboard-btn">{PROVIDER_INFO[llmProvider].dashboardLabel}</a>
       </div>
       <div class="form-group">
-        <label for="input-api-key">Paste your Hack Club AI API Key:</label>
+        <label for="input-api-key">Paste your {PROVIDER_INFO[llmProvider].label} API Key:</label>
         <div class="input-row">
-          <input id="input-api-key" type="password" placeholder="hc_..." bind:value={apiKey} />
+          <input id="input-api-key" type="password" placeholder={PROVIDER_INFO[llmProvider].placeholder} bind:value={apiKey} />
           <button type="button" class="secondary-btn" disabled={verifying} onclick={verifyKey}>Verify Key</button>
         </div>
         {#if apiStatus}
