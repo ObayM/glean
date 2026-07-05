@@ -12,24 +12,25 @@ function isEnvelope(value: unknown): value is Envelope<MessageType> {
   return typeof value === 'object' && value !== null && (value as { __glean?: unknown }).__glean === true;
 }
 
-export function sendMessage<K extends MessageType>(
+export async function sendMessage<K extends MessageType>(
   type: K,
   input: ProtocolMap[K]['input']
 ): Promise<Result<ProtocolMap[K]['output']>> {
   const envelope: Envelope<K> = { __glean: true, type, input };
-  return new Promise((resolve) => {
-    browser.runtime.sendMessage(envelope, (response: Result<ProtocolMap[K]['output']> | undefined) => {
-      if (browser.runtime.lastError) {
-        resolve({ ok: false, error: { code: 'UNKNOWN', message: browser.runtime.lastError.message ?? 'Message failed' } });
-        return;
-      }
-      if (!response) {
-        resolve({ ok: false, error: { code: 'UNKNOWN', message: 'No response from background.' } });
-        return;
-      }
-      resolve(response);
-    });
-  });
+  try {
+    const response = (await browser.runtime.sendMessage(envelope)) as
+      | Result<ProtocolMap[K]['output']>
+      | undefined;
+    if (!response) {
+      return { ok: false, error: { code: 'UNKNOWN', message: 'No response from background.' } };
+    }
+    return response;
+  } catch (err) {
+    return {
+      ok: false,
+      error: { code: 'UNKNOWN', message: err instanceof Error ? err.message : 'Message failed' },
+    };
+  }
 }
 
 export type Handlers = {
