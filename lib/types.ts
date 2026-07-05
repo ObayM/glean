@@ -16,6 +16,7 @@ export interface WordData {
   word: string;
   definition: string;
   example: string;
+  language: string;
   sentence: string;
   audioUrl: string | null;
   phonetic: string | null;
@@ -58,6 +59,7 @@ export interface AddToAnkiInput {
   definition: string;
   sentence: string;
   example: string;
+  language: string;
   audioUrl: string | null;
   pageUrl: string;
   force?: boolean;

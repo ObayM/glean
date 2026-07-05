@@ -1,5 +1,6 @@
 import { AppError } from './errors';
 import { fetchWithTimeout } from './http';
+import { isSupportedLanguage, SUPPORTED_LANGUAGES, type LanguageCode } from './languages';
 import type { LlmProvider, TestKeyResult } from './types';
 
 interface ProviderConfig {
@@ -24,11 +25,16 @@ export const PROVIDERS: Record<LlmProvider, ProviderConfig> = {
   },
 };
 
-const SYSTEM_PROMPT = `You are a precise vocabulary assistant. You return ONLY valid JSON with exactly two fields: "definition" and "example".
+const SUPPORTED_LANGUAGES_DESC = SUPPORTED_LANGUAGES.map((l) => `${l.code} (${l.label})`).join(', ');
+
+const SYSTEM_PROMPT = `You are a precise multilingual vocabulary assistant. You return ONLY valid JSON with exactly three fields: "language", "definition", and "example".
+
+Supported languages (ISO 639-1 codes): ${SUPPORTED_LANGUAGES_DESC}.
 
 Rules:
-- "definition": A clear, concise definition of the word AS USED in the given sentence context. The definition MUST match the specific meaning/sense used in the context, not a generic definition.
-- "example": A NEW example sentence using the word in the same sense. This must be a DIFFERENT sentence from the one provided.
+- "language": The ISO 639-1 code of the language the WORD itself is written in, detected from the word and its context sentence. Must be one of the supported codes above; if the word's actual language isn't supported, use "en".
+- "definition": A clear, concise definition of the word AS USED in the given sentence context, written in the SAME language as "language" (a monolingual dictionary-style definition, not a translation). The definition MUST match the specific meaning/sense used in the context, not a generic definition.
+- "example": A NEW example sentence using the word in the same sense, also written in the SAME language as "language". This must be a DIFFERENT sentence from the one provided.
 - Return ONLY the JSON object. No markdown, no code fences, no explanation, no extra text.
 - Do NOT wrap the JSON in backticks or code blocks.`;
 
@@ -97,6 +103,7 @@ async function chatCompletion(
 export interface RawWordData {
   definition: string;
   example: string;
+  language: LanguageCode;
 }
 
 export async function getWordData(
@@ -111,7 +118,7 @@ export async function getWordData(
   const userPrompt = `${prefix}Word: "${word}"
 Context sentence: "${sentence}"
 
-Return a JSON object with "definition" and "example" fields. The definition must match how the word is used in the context sentence above.`;
+Return a JSON object with "language", "definition", and "example" fields. The definition must match how the word is used in the context sentence above, and must be written in the same language as the word.`;
 
   const data = await chatCompletion(
     provider,
@@ -161,7 +168,9 @@ Return a JSON object with "definition" and "example" fields. The definition must
     );
   }
 
-  return { definition: parsed.definition, example: parsed.example };
+  const language: LanguageCode = isSupportedLanguage(parsed.language) ? parsed.language : 'en';
+
+  return { definition: parsed.definition, example: parsed.example, language };
 }
 
 export async function testApiKey(

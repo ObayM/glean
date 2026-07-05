@@ -97,11 +97,19 @@ async function tryFreeDictionary(word: string): Promise<AudioResult> {
   }
 }
 
-function getGoogleTTSUrl(word: string): string {
-  return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word)}&tl=en&client=tw-ob`;
+function getGoogleTTSUrl(word: string, language: string): string {
+  return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word)}&tl=${encodeURIComponent(language)}&client=tw-ob`;
 }
 
-export async function fetchAudio(word: string, merriamWebsterKey: string): Promise<AudioResult> {
+export async function fetchAudio(
+  word: string,
+  merriamWebsterKey: string,
+  language: string
+): Promise<AudioResult> {
+  if (language !== 'en') {
+    return { audioUrl: getGoogleTTSUrl(word, language), phonetic: null };
+  }
+
   if (merriamWebsterKey) {
     const mw = await tryMerriamWebster(word, merriamWebsterKey);
     if (mw.audioUrl) return mw;
@@ -110,5 +118,5 @@ export async function fetchAudio(word: string, merriamWebsterKey: string): Promi
   const fd = await tryFreeDictionary(word);
   if (fd.audioUrl) return fd;
 
-  return { audioUrl: getGoogleTTSUrl(word), phonetic: fd.phonetic };
+  return { audioUrl: getGoogleTTSUrl(word, 'en'), phonetic: fd.phonetic };
 }

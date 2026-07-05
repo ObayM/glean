@@ -45,15 +45,14 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
     return { ...cached, pageUrl };
   }
 
-  const [llmResult, audioResult] = await Promise.all([
-    getWordData(word, sentence, provider, apiKey, model),
-    fetchAudio(word, settings.mwKey),
-  ]);
+  const llmResult = await getWordData(word, sentence, provider, apiKey, model);
+  const audioResult = await fetchAudio(word, settings.mwKey, llmResult.language);
 
   const data: WordData = {
     word,
     definition: llmResult.definition,
     example: llmResult.example,
+    language: llmResult.language,
     audioUrl: audioResult.audioUrl,
     phonetic: audioResult.phonetic,
     sentence,
@@ -65,7 +64,7 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
 }
 
 async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> {
-  const { word, definition, sentence, example, audioUrl, pageUrl, force } = input;
+  const { word, definition, sentence, example, language, audioUrl, pageUrl, force } = input;
   const settings = await getSettings();
   const deckName = settings.deckName || DEFAULT_DECK;
 
@@ -92,7 +91,8 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
     audio.push({ url: audioUrl, filename: `glean_${safeWord}.mp3`, fields: ['Sound'] });
   }
 
-  const noteId = await addNote(deckName, fields, ['glean'], audio, Boolean(force));
+  const tags = ['glean', `lang-${language || 'en'}`];
+  const noteId = await addNote(deckName, fields, tags, audio, Boolean(force));
 
   try {
     await recordAddedWord({ word, definition, sentence, example, timestamp: Date.now() });

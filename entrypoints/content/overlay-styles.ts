@@ -133,6 +133,25 @@ export const overlayStyles = `
     letter-spacing: -0.01em;
   }
 
+  .word-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .lang-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #007AFF;
+    background: rgba(0, 122, 255, 0.08);
+    border: 1px solid rgba(0, 122, 255, 0.12);
+    border-radius: 6px;
+    padding: 2px 6px;
+    line-height: 1.4;
+  }
+
   .btn-audio {
     background: rgba(0, 122, 255, 0.08);
     border: 1px solid rgba(0, 122, 255, 0.12);

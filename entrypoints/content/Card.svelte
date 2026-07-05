@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { friendlyMessage } from '../../lib/errors';
   import { splitByWord } from '../../lib/highlight';
+  import { languageLabel } from '../../lib/languages';
   import { sendMessage } from '../../lib/messaging';
   import type { WordData } from '../../lib/types';
   import { draggable, resizable } from './interactions';
@@ -82,6 +83,7 @@
       definition: data.definition,
       sentence: data.sentence,
       example: data.example,
+      language: data.language,
       audioUrl: data.audioUrl,
       pageUrl: data.pageUrl,
       force,
@@ -160,14 +162,17 @@
         <div class="word-section">
           <div class="word-header">
             <span class="word-text">{data.word}</span>
-            {#if data.audioUrl}
-              <button class="btn-audio" title="Play pronunciation" onclick={playAudio} aria-label="Play pronunciation">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-              </button>
-            {/if}
+            <div class="word-header-actions">
+              {#if data.language}<span class="lang-badge">{languageLabel(data.language)}</span>{/if}
+              {#if data.audioUrl}
+                <button class="btn-audio" title="Play pronunciation" onclick={playAudio} aria-label="Play pronunciation">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </button>
+              {/if}
+            </div>
           </div>
           {#if data.phonetic}<div class="word-phonetic">{data.phonetic}</div>{/if}
         </div>
