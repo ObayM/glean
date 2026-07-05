@@ -8,6 +8,16 @@ const ABBREVIATIONS = new Set([
   'i.e', 'e.g', 'viz', 'cf', 'al',
   'fig', 'vol', 'no', 'op', 'ed', 'rev', 'trans',
   'u.s', 'u.k', 'u.n',
+  // German
+  'usw', 'bzw', 'ca', 'geb', 'gest', 'str', 'jh', 'nr',
+  // French
+  'mme', 'mlle', 'bd', 'tél',
+  // Spanish / Portuguese
+  'sra', 'srta', 'ud', 'uds', 'pág', 'núm', 'cía',
+  // Italian
+  'sig', 'dott', 'ecc', 'pag',
+  // Dutch
+  'dhr', 'mevr', 'ing', 'blz',
 ]);
 
 const MAX_SENTENCE_LENGTH = 200;
@@ -25,7 +35,7 @@ function isSentenceBoundary(text: string, dotIndex: number): boolean {
   }
 
   let wordStart = dotIndex - 1;
-  while (wordStart >= 0 && /[a-zA-Z.]/.test(text[wordStart]!)) {
+  while (wordStart >= 0 && /[\p{L}.]/u.test(text[wordStart]!)) {
     wordStart--;
   }
   const wordBeforeDot = text.substring(wordStart + 1, dotIndex).toLowerCase();
@@ -33,7 +43,7 @@ function isSentenceBoundary(text: string, dotIndex: number): boolean {
     return false;
   }
 
-  if (wordBeforeDot.length === 1 && /[A-Z]/.test(text[dotIndex - 1]!)) {
+  if (wordBeforeDot.length === 1 && /\p{Lu}/u.test(text[dotIndex - 1]!)) {
     return false;
   }
 
