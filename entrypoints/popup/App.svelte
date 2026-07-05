@@ -136,6 +136,12 @@
                 <i class="fa-solid fa-chevron-down recent-chevron"></i>
               </div>
               <div class="recent-details">
+                {#if item.meaning}
+                  <div class="detail-block">
+                    <div class="detail-label">Meaning</div>
+                    <div class="detail-val italic">{item.meaning}</div>
+                  </div>
+                {/if}
                 <div class="detail-block">
                   <div class="detail-label">Definition</div>
                   <div class="detail-val">{item.definition || ''}</div>

@@ -6,7 +6,7 @@ import {
   testConnection,
   wordExistsInDeck,
 } from '../lib/anki-connect';
-import { fetchAudio } from '../lib/audio-fetcher';
+import { fetchAudio, fetchFreeDictionaryEntry } from '../lib/audio-fetcher';
 import { AppError } from '../lib/errors';
 import { escapeHtml, highlightToHtml } from '../lib/highlight';
 import { PROVIDERS, getDefaultModel, getWordData, testApiKey } from '../lib/llm-api';
@@ -45,12 +45,14 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
     return { ...cached, pageUrl };
   }
 
-  const llmResult = await getWordData(word, sentence, provider, apiKey, model);
-  const audioResult = await fetchAudio(word, settings.mwKey, llmResult.language);
+  const dictionaryEntry = await fetchFreeDictionaryEntry(word);
+  const llmResult = await getWordData(word, sentence, provider, apiKey, model, dictionaryEntry.definitions);
+  const audioResult = await fetchAudio(word, settings.mwKey, llmResult.language, dictionaryEntry);
 
   const data: WordData = {
     word,
     definition: llmResult.definition,
+    meaning: llmResult.meaning,
     example: llmResult.example,
     language: llmResult.language,
     audioUrl: audioResult.audioUrl,
@@ -64,7 +66,7 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
 }
 
 async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> {
-  const { word, definition, sentence, example, language, audioUrl, pageUrl, force } = input;
+  const { word, definition, meaning, sentence, example, language, audioUrl, pageUrl, force } = input;
   const settings = await getSettings();
   const deckName = settings.deckName || DEFAULT_DECK;
 
@@ -77,6 +79,7 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
 
   const fields: Record<string, string> = {
     Word: escapeHtml(word),
+    Meaning: meaning ? escapeHtml(meaning) : '',
     Definition: escapeHtml(definition),
     Sentence: sentence ? highlightToHtml(sentence, word) : '',
     Example: example ? escapeHtml(example) : '',
@@ -95,7 +98,7 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   const noteId = await addNote(deckName, fields, tags, audio, Boolean(force));
 
   try {
-    await recordAddedWord({ word, definition, sentence, example, timestamp: Date.now() });
+    await recordAddedWord({ word, definition, meaning, sentence, example, timestamp: Date.now() });
   } catch (err) {
     console.error('[Glean] Failed to update history:', err);
   }

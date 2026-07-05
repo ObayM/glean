@@ -81,6 +81,7 @@
     const res = await sendMessage('ADD_TO_ANKI', {
       word: data.word,
       definition: data.definition,
+      meaning: data.meaning,
       sentence: data.sentence,
       example: data.example,
       language: data.language,
@@ -176,6 +177,10 @@
           </div>
           {#if data.phonetic}<div class="word-phonetic">{data.phonetic}</div>{/if}
         </div>
+
+        {#if data.meaning}
+          <div class="meaning-text">{data.meaning}</div>
+        {/if}
 
         <div class="definition-section">
           <div class="definition-text">{data.definition}</div>

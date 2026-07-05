@@ -223,7 +223,7 @@
           <span class="status-msg" class:status-success={keyStatus.type === 'success'} class:status-error={keyStatus.type === 'error'}>{keyStatus.msg}</span>
         {/if}
       </div>
-      <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}.</span>
+      <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}. The dictionary-verified "Meaning" field is English-only — no free dictionary exists for the other languages.</span>
     </div>
 
     <div class="settings-card glass-panel">

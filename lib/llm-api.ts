@@ -1,3 +1,4 @@
+import type { DictionaryDefinition } from './audio-fetcher';
 import { AppError } from './errors';
 import { fetchWithTimeout } from './http';
 import { isSupportedLanguage, SUPPORTED_LANGUAGES, type LanguageCode } from './languages';
@@ -27,12 +28,13 @@ export const PROVIDERS: Record<LlmProvider, ProviderConfig> = {
 
 const SUPPORTED_LANGUAGES_DESC = SUPPORTED_LANGUAGES.map((l) => `${l.code} (${l.label})`).join(', ');
 
-const SYSTEM_PROMPT = `You are a precise multilingual vocabulary assistant. You return ONLY valid JSON with exactly three fields: "language", "definition", and "example".
+const SYSTEM_PROMPT = `You are a precise multilingual vocabulary assistant. You return ONLY valid JSON with exactly four fields: "language", "meaning", "definition", and "example".
 
 Supported languages (ISO 639-1 codes): ${SUPPORTED_LANGUAGES_DESC}.
 
 Rules:
 - "language": The ISO 639-1 code of the language the WORD itself is written in, detected from the word and its context sentence. Must be one of the supported codes above; if the word's actual language isn't supported, use "en".
+- "meaning": If a numbered list of dictionary definitions is provided below, pick the ONE entry that best matches how the word is used in the context sentence and return its exact text verbatim, unmodified. If no dictionary definitions are provided, or none of them fit the context, set this to null.
 - "definition": A clear, concise definition of the word AS USED in the given sentence context, written in the SAME language as "language" (a monolingual dictionary-style definition, not a translation). The definition MUST match the specific meaning/sense used in the context, not a generic definition.
 - "example": A NEW example sentence using the word in the same sense, also written in the SAME language as "language". This must be a DIFFERENT sentence from the one provided.
 - Return ONLY the JSON object. No markdown, no code fences, no explanation, no extra text.
@@ -104,6 +106,7 @@ export interface RawWordData {
   definition: string;
   example: string;
   language: LanguageCode;
+  meaning: string | null;
 }
 
 export async function getWordData(
@@ -111,14 +114,20 @@ export async function getWordData(
   sentence: string,
   provider: LlmProvider,
   apiKey: string,
-  model: string
+  model: string,
+  dictionaryDefinitions: DictionaryDefinition[] = []
 ): Promise<RawWordData> {
   const config = resolveProvider(provider);
   const prefix = config.noThinkPrefix ? '/no_think\n' : '';
+  const dictionaryBlock = dictionaryDefinitions.length
+    ? `\n\nDictionary definitions for "${word}" (pick the one that best fits the context above for "meaning"):\n${dictionaryDefinitions
+        .map((d, i) => `${i + 1}. (${d.partOfSpeech}) ${d.definition}`)
+        .join('\n')}`
+    : '';
   const userPrompt = `${prefix}Word: "${word}"
-Context sentence: "${sentence}"
+Context sentence: "${sentence}"${dictionaryBlock}
 
-Return a JSON object with "language", "definition", and "example" fields. The definition must match how the word is used in the context sentence above, and must be written in the same language as the word.`;
+Return a JSON object with "language", "meaning", "definition", and "example" fields. The definition must match how the word is used in the context sentence above, and must be written in the same language as the word.`;
 
   const data = await chatCompletion(
     provider,
@@ -128,7 +137,7 @@ Return a JSON object with "language", "definition", and "example" fields. The de
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },
     ],
-    300
+    500
   );
 
   const content = data.choices?.[0]?.message?.content;
@@ -169,8 +178,9 @@ Return a JSON object with "language", "definition", and "example" fields. The de
   }
 
   const language: LanguageCode = isSupportedLanguage(parsed.language) ? parsed.language : 'en';
+  const meaning = typeof parsed.meaning === 'string' && parsed.meaning.trim() ? parsed.meaning.trim() : null;
 
-  return { definition: parsed.definition, example: parsed.example, language };
+  return { definition: parsed.definition, example: parsed.example, language, meaning };
 }
 
 export async function testApiKey(

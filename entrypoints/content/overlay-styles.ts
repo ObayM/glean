@@ -180,6 +180,13 @@ export const overlayStyles = `
     margin-top: 4px;
   }
 
+  .meaning-text {
+    font-size: 12px;
+    font-style: italic;
+    color: #6E6E73;
+    margin-bottom: 10px;
+  }
+
   .definition-section {
     background: rgba(255, 255, 255, 0.35);
     border-left: 3px solid #007AFF;

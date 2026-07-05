@@ -4,7 +4,8 @@ import { fetchWithTimeout } from './http';
 const ANKI_CONNECT_URL = 'http://127.0.0.1:8765';
 const ANKI_CONNECT_VERSION = 6;
 const MODEL_NAME = 'Glean Vocab';
-const MODEL_FIELDS = ['Word', 'Definition', 'Sentence', 'Example', 'Sound', 'Image', 'Source URL'];
+const MODEL_FIELDS = ['Word', 'Meaning', 'Definition', 'Sentence', 'Example', 'Sound', 'Image', 'Source URL'];
+const CARD_TEMPLATE_NAME = 'Glean Card';
 
 export const CARD_CSS = `
 .glean-card {
@@ -26,6 +27,13 @@ export const CARD_CSS = `
   color: #000000;
   margin: 0 0 0.5em 0;
   letter-spacing: -0.02em;
+}
+
+.glean-card .meaning {
+  font-size: 1em;
+  color: #525252;
+  margin: 0 0 0.8em 0;
+  font-style: italic;
 }
 
 .glean-card .definition {
@@ -108,6 +116,10 @@ export const CARD_CSS = `
   color: #e8e8e8;
 }
 
+.night-mode .glean-card .meaning {
+  color: #b8b8bd;
+}
+
 .night-mode .glean-card .definition {
   color: #e8e8e8;
   background: #35353a;
@@ -150,6 +162,7 @@ const CARD_FRONT = `<div class="glean-card">
 
 const CARD_BACK = `<div class="glean-card">
   <h1 class="word">{{Word}}</h1>
+  {{#Meaning}}<div class="meaning">{{Meaning}}</div>{{/Meaning}}
   <div class="definition">{{Definition}}</div>
   <hr>
   <div class="sentence">{{Sentence}}</div>
@@ -240,15 +253,32 @@ export async function wordExistsInDeck(deckName: string, word: string): Promise<
 
 export async function ensureNoteType(): Promise<void> {
   const models = await getModelNames();
-  if (models.includes(MODEL_NAME)) return;
+  if (!models.includes(MODEL_NAME)) {
+    await ankiConnectRequest('createModel', {
+      modelName: MODEL_NAME,
+      inOrderFields: MODEL_FIELDS,
+      css: CARD_CSS,
+      isCloze: false,
+      cardTemplates: [{ Name: CARD_TEMPLATE_NAME, Front: CARD_FRONT, Back: CARD_BACK }],
+    });
+    return;
+  }
 
-  await ankiConnectRequest('createModel', {
-    modelName: MODEL_NAME,
-    inOrderFields: MODEL_FIELDS,
-    css: CARD_CSS,
-    isCloze: false,
-    cardTemplates: [{ Name: 'Glean Card', Front: CARD_FRONT, Back: CARD_BACK }],
-  });
+  const existingFields = await ankiConnectRequest<string[]>('modelFieldNames', { modelName: MODEL_NAME });
+  if (!existingFields.includes('Meaning')) {
+    const insertIndex = existingFields.indexOf('Definition');
+    await ankiConnectRequest('modelFieldAdd', {
+      modelName: MODEL_NAME,
+      fieldName: 'Meaning',
+      index: insertIndex >= 0 ? insertIndex : existingFields.length,
+    });
+    await ankiConnectRequest('updateModelTemplates', {
+      model: { name: MODEL_NAME, templates: { [CARD_TEMPLATE_NAME]: { Front: CARD_FRONT, Back: CARD_BACK } } },
+    });
+    await ankiConnectRequest('updateModelStyling', {
+      model: { name: MODEL_NAME, css: CARD_CSS },
+    });
+  }
 }
 
 export function ensureDeck(deckName: string): Promise<number> {

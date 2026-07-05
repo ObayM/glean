@@ -15,6 +15,7 @@ export interface Settings {
 export interface WordData {
   word: string;
   definition: string;
+  meaning: string | null;
   example: string;
   language: string;
   sentence: string;
@@ -26,6 +27,7 @@ export interface WordData {
 export interface RecentWord {
   word: string;
   definition: string;
+  meaning: string | null;
   sentence: string;
   example: string;
   timestamp: number;
@@ -57,6 +59,7 @@ export interface ProcessWordInput {
 export interface AddToAnkiInput {
   word: string;
   definition: string;
+  meaning: string | null;
   sentence: string;
   example: string;
   language: string;
