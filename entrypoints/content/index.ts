@@ -105,8 +105,8 @@ export default defineContentScript({
       if (!selectedText) return null;
 
       const rawWord = selectedText.split(/\s+/)[0] ?? '';
-      const word = rawWord.replace(/[^a-zA-Z0-9'-]/g, '');
-      if (!word || word.length < 2) return null;
+      const word = rawWord.replace(/[^\p{L}\p{M}\p{N}'-]/gu, '');
+      if (!word) return null;
 
       const range = selection.getRangeAt(0);
       const block = blockElementFor(range.startContainer);
