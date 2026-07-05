@@ -2,11 +2,14 @@
   import { onMount } from 'svelte';
   import { browser } from 'wxt/browser';
   import GlassFilter from '../../components/GlassFilter.svelte';
+  import { SUPPORTED_LANGUAGES } from '../../lib/languages';
   import { getDefaultModel } from '../../lib/llm-api';
   import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { getSettings, setSettings } from '../../lib/storage';
   import type { LlmProvider } from '../../lib/types';
+
+  const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
 
   let provider = $state<LlmProvider>('hackclub');
   let hackclubApiKey = $state('');
@@ -220,6 +223,7 @@
           <span class="status-msg" class:status-success={keyStatus.type === 'success'} class:status-error={keyStatus.type === 'error'}>{keyStatus.msg}</span>
         {/if}
       </div>
+      <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}.</span>
     </div>
 
     <div class="settings-card glass-panel">
@@ -233,7 +237,7 @@
           <input id="input-mw-key" type="password" placeholder="paste your MW Collegiate key here" bind:this={mwKeyEl} bind:value={mwKey} oninput={scheduleSave} />
           <button type="button" class="toggle-password-btn" title="Show key" aria-label="Toggle key visibility" onclick={() => togglePassword(mwKeyEl)}><i class="fa-solid fa-eye"></i></button>
         </div>
-        <span class="field-hint">Enables premium native US pronunciations. Leave empty to use the Free Dictionary API instead.</span>
+        <span class="field-hint">Enables premium native US pronunciations for English words. Other supported languages always use automatic native-language pronunciation.</span>
       </div>
     </div>
 
