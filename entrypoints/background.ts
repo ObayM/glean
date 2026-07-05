@@ -8,7 +8,7 @@ import {
 } from '../lib/anki-connect';
 import { fetchAudio } from '../lib/audio-fetcher';
 import { AppError } from '../lib/errors';
-import { highlightToHtml } from '../lib/highlight';
+import { escapeHtml, highlightToHtml } from '../lib/highlight';
 import { PROVIDERS, getDefaultModel, getWordData, testApiKey } from '../lib/llm-api';
 import { registerHandlers, sendToTab } from '../lib/messaging';
 import {
@@ -77,13 +77,13 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   }
 
   const fields: Record<string, string> = {
-    Word: word,
-    Definition: definition,
+    Word: escapeHtml(word),
+    Definition: escapeHtml(definition),
     Sentence: sentence ? highlightToHtml(sentence, word) : '',
-    Example: example || '',
+    Example: example ? escapeHtml(example) : '',
     Sound: '',
     Image: '',
-    'Source URL': pageUrl || '',
+    'Source URL': pageUrl ? escapeHtml(pageUrl) : '',
   };
 
   const audio = [];
