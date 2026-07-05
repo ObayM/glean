@@ -32,8 +32,6 @@
   }
   let confetti = $state<Particle[]>([]);
 
-  const progress = $derived(((currentStep + 1) / TOTAL_STEPS) * 100);
-
   onMount(() => initLiquidGlass());
 
   function goToStep(index: number) {
@@ -109,9 +107,6 @@
 
 <div class="welcome-container">
   <header class="wizard-header">
-    <div class="progress-bar-container">
-      <div class="progress-bar" style="width: {progress}%;"></div>
-    </div>
     <div class="steps-indicator">
       {#each Array(TOTAL_STEPS) as _, i}
         <span class="step-dot" class:active={currentStep === i}></span>
@@ -131,12 +126,6 @@
           <span class="demo-text">The universe is full of </span>
           <span class="demo-highlight">ephemeral</span>
           <span class="demo-text"> beauty that fades in a moment.</span>
-          <div class="demo-card glass-panel">
-            <div class="demo-card-header">Glean</div>
-            <div class="demo-card-word">ephemeral <span class="audio-badge">[Listen]</span></div>
-            <div class="demo-card-def">Lasting for a very short time; transient.</div>
-            <div class="demo-card-btn">Add to Anki</div>
-          </div>
         </div>
       </div>
       <div class="actions-row">
