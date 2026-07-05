@@ -30,9 +30,11 @@ export default defineContentScript({
     let activeHost: HTMLElement | null = null;
     let activeComponent: Record<string, unknown> | null = null;
     let lastRightClickTarget: EventTarget | null = null;
+    let lastRightClickRange: Range | null = null;
 
     document.addEventListener('contextmenu', (event) => {
       lastRightClickTarget = event.composedPath()[0] ?? event.target;
+      lastRightClickRange = caretRangeFromPoint(event.clientX, event.clientY);
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') dismiss();
@@ -67,6 +69,35 @@ export default defineContentScript({
       return el ?? document.body;
     }
 
+    function caretRangeFromPoint(x: number, y: number): Range | null {
+      if (typeof document.caretRangeFromPoint === 'function') {
+        return document.caretRangeFromPoint(x, y);
+      }
+      const legacyDoc = document as Document & {
+        caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+      };
+      if (typeof legacyDoc.caretPositionFromPoint === 'function') {
+        const pos = legacyDoc.caretPositionFromPoint(x, y);
+        if (!pos) return null;
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+        return range;
+      }
+      return null;
+    }
+
+    function textOffsetInBlock(block: HTMLElement, node: Node, offset: number): number {
+      const preRange = document.createRange();
+      preRange.selectNodeContents(block);
+      try {
+        preRange.setEnd(node, offset);
+      } catch {
+        return -1;
+      }
+      return preRange.toString().length;
+    }
+
     function selectionContext(): { word: string; sentence: string; rects: DOMRect | null } | null {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return null;
@@ -77,11 +108,12 @@ export default defineContentScript({
       const word = rawWord.replace(/[^a-zA-Z0-9'-]/g, '');
       if (!word || word.length < 2) return null;
 
-      const block = blockElementFor(selection.anchorNode);
+      const range = selection.getRangeAt(0);
+      const block = blockElementFor(range.startContainer);
       const textContent = block.textContent ?? '';
-      const wordOffset = textContent.indexOf(selectedText);
+      const wordOffset = textOffsetInBlock(block, range.startContainer, range.startOffset);
       const sentence = extractSentence(textContent, wordOffset >= 0 ? wordOffset : 0, word);
-      const rects = selection.getRangeAt(0).getBoundingClientRect();
+      const rects = range.getBoundingClientRect();
       return { word, sentence, rects };
     }
 
@@ -89,14 +121,22 @@ export default defineContentScript({
       let sentence = '';
       let rects: DOMRect | null = null;
 
-      if (lastRightClickTarget instanceof Node) {
+      if (lastRightClickRange) {
+        const block = blockElementFor(lastRightClickRange.startContainer);
+        const textContent = block.textContent ?? '';
+        const wordOffset = textOffsetInBlock(block, lastRightClickRange.startContainer, lastRightClickRange.startOffset);
+        if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, word);
+        rects = lastRightClickRange.getBoundingClientRect();
+      }
+
+      if (!sentence && lastRightClickTarget instanceof Node) {
         const block = blockElementFor(lastRightClickTarget);
         const textContent = block.textContent ?? '';
         const wordOffset = textContent.toLowerCase().indexOf(word.toLowerCase());
         if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, word);
-        if (lastRightClickTarget instanceof Element) {
-          rects = lastRightClickTarget.getBoundingClientRect();
-        }
+      }
+      if (!rects && lastRightClickTarget instanceof Element) {
+        rects = lastRightClickTarget.getBoundingClientRect();
       }
 
       if (!sentence) {
