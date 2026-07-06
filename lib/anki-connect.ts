@@ -181,7 +181,7 @@ async function ankiConnectRequest<T>(action: string, params: Record<string, unkn
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
-    });
+    }, 3000);
   } catch (err) {
     if (err instanceof AppError && err.code === 'TIMEOUT') throw err;
     throw new AppError(
@@ -247,7 +247,19 @@ function escapeAnkiQuery(value: string): string {
 }
 
 export async function wordExistsInDeck(deckName: string, word: string): Promise<boolean> {
-  const query = `deck:"${escapeAnkiQuery(deckName)}" "Word:${escapeAnkiQuery(word)}"`;
+  const cleanWord = word.trim();
+  const lower = cleanWord.toLowerCase();
+  const title = cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1).toLowerCase();
+
+  const escapedDeck = escapeAnkiQuery(deckName);
+  const escapedLower = escapeAnkiQuery(lower);
+
+  let query = `deck:"${escapedDeck}" "Word:${escapedLower}"`;
+  if (title !== lower) {
+    const escapedTitle = escapeAnkiQuery(title);
+    query = `deck:"${escapedDeck}" ("Word:${escapedLower}" or "Word:${escapedTitle}")`;
+  }
+
   const notes = await ankiConnectRequest<number[]>('findNotes', { query });
   return notes.length > 0;
 }

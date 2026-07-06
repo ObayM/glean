@@ -137,7 +137,7 @@ Return a JSON object with "language", "meaning", "definition", and "example" fie
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },
     ],
-    500
+    800
   );
 
   const content = data.choices?.[0]?.message?.content;

@@ -25,6 +25,7 @@ import type {
   AddToAnkiInput,
   AddToAnkiResult,
   AnkiStatus,
+  OffscreenMessage,
   ProcessWordInput,
   TestKeyInput,
   WordData,
@@ -176,7 +177,8 @@ async function playAudioOffscreen(audioUrl: string): Promise<void> {
       justification: 'Play pronunciation audio files for words',
     });
   }
-  browser.runtime.sendMessage({ target: 'offscreen', type: 'PLAY_AUDIO', payload: { audioUrl } });
+  const message: OffscreenMessage = { target: 'offscreen', type: 'PLAY_AUDIO', payload: { audioUrl } };
+  browser.runtime.sendMessage(message);
 }
 
 export default defineBackground(() => {

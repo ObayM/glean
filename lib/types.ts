@@ -92,3 +92,9 @@ export interface ProtocolMap {
 export type MessageType = keyof ProtocolMap;
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: SerializedError };
+
+export interface OffscreenMessage {
+  target: 'offscreen';
+  type: 'PLAY_AUDIO';
+  payload: { audioUrl: string };
+}

@@ -1,12 +1,14 @@
-interface OffscreenMessage {
-  target?: string;
-  type?: string;
-  payload?: { audioUrl: string };
-}
+import type { OffscreenMessage } from '../../lib/types';
 
-browser.runtime.onMessage.addListener((message: OffscreenMessage) => {
-  if (message.target === 'offscreen' && message.type === 'PLAY_AUDIO' && message.payload) {
-    playAudio(message.payload.audioUrl);
+browser.runtime.onMessage.addListener((message: unknown) => {
+  if (
+    message &&
+    typeof message === 'object' &&
+    (message as Record<string, unknown>).target === 'offscreen' &&
+    (message as Record<string, unknown>).type === 'PLAY_AUDIO'
+  ) {
+    const msg = message as OffscreenMessage;
+    playAudio(msg.payload.audioUrl);
   }
 });
 

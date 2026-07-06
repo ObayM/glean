@@ -64,22 +64,35 @@ export function getHistory(): Promise<HistoryState> {
   return read(EMPTY_HISTORY);
 }
 
-export async function recordAddedWord(entry: RecentWord): Promise<void> {
-  const { recentWords, stats } = await getHistory();
+let writeQueue = Promise.resolve();
 
-  const nextRecent = [...recentWords, entry];
-  while (nextRecent.length > MAX_RECENT) nextRecent.shift();
+async function enqueueWrite<T>(op: () => Promise<T>): Promise<T> {
+  const next = writeQueue.then(op);
+  writeQueue = next.then(
+    () => undefined,
+    () => undefined
+  );
+  return next;
+}
 
-  const todayStr = new Date().toDateString();
-  const nextStats: Stats = { ...stats };
-  if (nextStats.todayDate !== todayStr) {
-    nextStats.todayCount = 0;
-    nextStats.todayDate = todayStr;
-  }
-  nextStats.todayCount += 1;
-  nextStats.totalCount += 1;
+export function recordAddedWord(entry: RecentWord): Promise<void> {
+  return enqueueWrite(async () => {
+    const { recentWords, stats } = await getHistory();
 
-  await write({ recentWords: nextRecent, stats: nextStats });
+    const nextRecent = [...recentWords, entry];
+    while (nextRecent.length > MAX_RECENT) nextRecent.shift();
+
+    const todayStr = new Date().toDateString();
+    const nextStats: Stats = { ...stats };
+    if (nextStats.todayDate !== todayStr) {
+      nextStats.todayCount = 0;
+      nextStats.todayDate = todayStr;
+    }
+    nextStats.todayCount += 1;
+    nextStats.totalCount += 1;
+
+    await write({ recentWords: nextRecent, stats: nextStats });
+  });
 }
 
 interface CacheState {
@@ -90,7 +103,8 @@ interface CacheState {
 const EMPTY_CACHE: CacheState = { entries: {}, order: [] };
 
 function cacheKey(provider: string, model: string, word: string, sentence: string): string {
-  return `${provider}|${model}|${word.toLowerCase()}|${sentence}`;
+  const normalizedSentence = sentence.trim().replace(/\s+/g, ' ');
+  return `${provider}|${model}|${word.toLowerCase()}|${normalizedSentence}`;
 }
 
 async function getCache(): Promise<CacheState> {
@@ -108,24 +122,27 @@ export async function getCachedWord(
   return cache.entries[cacheKey(provider, model, word, sentence)] ?? null;
 }
 
-export async function putCachedWord(
+export function putCachedWord(
   provider: string,
   model: string,
   word: string,
   sentence: string,
   data: WordData
 ): Promise<void> {
-  const cache = await getCache();
-  const key = cacheKey(provider, model, word, sentence);
+  return enqueueWrite(async () => {
+    const cache = await getCache();
+    const key = cacheKey(provider, model, word, sentence);
 
-  const order = cache.order.filter((k) => k !== key);
-  order.push(key);
-  const entries = { ...cache.entries, [key]: data };
+    const order = cache.order.filter((k) => k !== key);
+    order.push(key);
+    const entries = { ...cache.entries, [key]: data };
 
-  while (order.length > CACHE_LIMIT) {
-    const evicted = order.shift();
-    if (evicted) delete entries[evicted];
-  }
+    while (order.length > CACHE_LIMIT) {
+      const evicted = order.shift();
+      if (evicted) delete entries[evicted];
+    }
 
-  await write({ llmCache: { entries, order } });
+    await write({ llmCache: { entries, order } });
+  });
 }
+
