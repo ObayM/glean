@@ -13,6 +13,7 @@ export default defineConfig({
       'https://api.dictionaryapi.dev/*',
       'https://dictionaryapi.com/*',
       'https://media.merriam-webster.com/*',
+      'https://translate.google.com/*',
     ],
     icons: {
       16: '/icons/icon16.png',

@@ -216,7 +216,8 @@ export function getModelNames(): Promise<string[]> {
 }
 
 export interface AnkiAudio {
-  url: string;
+  url?: string;
+  data?: string;
   filename: string;
   fields: string[];
 }

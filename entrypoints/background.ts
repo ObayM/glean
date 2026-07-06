@@ -9,6 +9,7 @@ import {
 import { fetchAudio, fetchFreeDictionaryEntry } from '../lib/audio-fetcher';
 import { AppError } from '../lib/errors';
 import { escapeHtml, highlightToHtml } from '../lib/highlight';
+import { fetchWithTimeout } from '../lib/http';
 import { PROVIDERS, getDefaultModel, getWordData, testApiKey } from '../lib/llm-api';
 import { registerHandlers, sendToTab } from '../lib/messaging';
 import {
@@ -30,6 +31,27 @@ import type {
 } from '../lib/types';
 
 const CONTEXT_MENU_ID = 'glean-ctx-menu';
+const inFlightRequests = new Map<string, Promise<WordData>>();
+let noteTypeEnsured = false;
+const ensuredDecks = new Set<string>();
+
+async function fetchAudioAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetchWithTimeout(url);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    return btoa(binary);
+  } catch (err) {
+    console.warn('[Glean] Failed to fetch audio as base64:', err);
+    return null;
+  }
+}
 
 async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput): Promise<WordData> {
   const settings = await getSettings();
@@ -40,29 +62,45 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
     throw new AppError('NO_API_KEY', `API key not configured. Set your ${label} key in Glean settings.`);
   }
 
-  const cached = await getCachedWord(provider, model, word, sentence);
-  if (cached) {
-    return { ...cached, pageUrl };
+  const key = `${provider}|${model}|${word.toLowerCase()}|${sentence}`;
+  const existing = inFlightRequests.get(key);
+  if (existing) {
+    const result = await existing;
+    return { ...result, pageUrl };
   }
 
-  const dictionaryEntry = await fetchFreeDictionaryEntry(word);
-  const llmResult = await getWordData(word, sentence, provider, apiKey, model, dictionaryEntry.definitions);
-  const audioResult = await fetchAudio(word, settings.mwKey, llmResult.language, dictionaryEntry);
+  const promise = (async () => {
+    const cached = await getCachedWord(provider, model, word, sentence);
+    if (cached) {
+      return cached;
+    }
 
-  const data: WordData = {
-    word,
-    definition: llmResult.definition,
-    meaning: llmResult.meaning,
-    example: llmResult.example,
-    language: llmResult.language,
-    audioUrl: audioResult.audioUrl,
-    phonetic: audioResult.phonetic,
-    sentence,
-    pageUrl,
-  };
+    const dictionaryEntry = await fetchFreeDictionaryEntry(word);
+    const llmResult = await getWordData(word, sentence, provider, apiKey, model, dictionaryEntry.definitions);
+    const audioResult = await fetchAudio(word, settings.mwKey, llmResult.language, dictionaryEntry);
 
-  await putCachedWord(provider, model, word, sentence, data);
-  return data;
+    const data: WordData = {
+      word,
+      definition: llmResult.definition,
+      meaning: llmResult.meaning,
+      example: llmResult.example,
+      language: llmResult.language,
+      audioUrl: audioResult.audioUrl,
+      phonetic: audioResult.phonetic,
+      sentence,
+      pageUrl,
+    };
+
+    await putCachedWord(provider, model, word, sentence, data);
+    return data;
+  })();
+
+  inFlightRequests.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightRequests.delete(key);
+  }
 }
 
 async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> {
@@ -70,8 +108,14 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   const settings = await getSettings();
   const deckName = settings.deckName || DEFAULT_DECK;
 
-  await ensureNoteType();
-  await ensureDeck(deckName);
+  if (!noteTypeEnsured) {
+    await ensureNoteType();
+    noteTypeEnsured = true;
+  }
+  if (!ensuredDecks.has(deckName)) {
+    await ensureDeck(deckName);
+    ensuredDecks.add(deckName);
+  }
 
   if (!force && (await wordExistsInDeck(deckName, word))) {
     return { status: 'duplicate' };
@@ -91,7 +135,10 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   const audio = [];
   if (audioUrl) {
     const safeWord = word.toLowerCase().replace(/[^a-z0-9-]/g, '_');
-    audio.push({ url: audioUrl, filename: `glean_${safeWord}.mp3`, fields: ['Sound'] });
+    const base64Data = await fetchAudioAsBase64(audioUrl);
+    if (base64Data) {
+      audio.push({ data: base64Data, filename: `glean_${safeWord}.mp3`, fields: ['Sound'] });
+    }
   }
 
   const tags = ['glean', `lang-${language || 'en'}`];
@@ -105,6 +152,7 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
 
   return { status: 'added', noteId };
 }
+
 
 async function handleCheckAnki(): Promise<AnkiStatus> {
   try {
