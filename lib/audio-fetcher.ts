@@ -5,7 +5,7 @@ export interface AudioResult {
   phonetic: string | null;
 }
 
-function getMWAudioSubdir(audioFilename: string): string {
+export function getMWAudioSubdir(audioFilename: string): string {
   if (audioFilename.startsWith('bix')) return 'bix';
   if (audioFilename.startsWith('gg')) return 'gg';
   if (/^[^a-zA-Z]/.test(audioFilename)) return 'number';

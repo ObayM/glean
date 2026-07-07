@@ -246,7 +246,7 @@ function escapeAnkiQuery(value: string): string {
   return value.replace(/["\\]/g, '\\$&');
 }
 
-export async function wordExistsInDeck(deckName: string, word: string): Promise<boolean> {
+export function buildDuplicateQuery(deckName: string, word: string): string {
   const cleanWord = word.trim();
   const lower = cleanWord.toLowerCase();
   const title = cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1).toLowerCase();
@@ -254,12 +254,16 @@ export async function wordExistsInDeck(deckName: string, word: string): Promise<
   const escapedDeck = escapeAnkiQuery(deckName);
   const escapedLower = escapeAnkiQuery(lower);
 
-  let query = `deck:"${escapedDeck}" "Word:${escapedLower}"`;
-  if (title !== lower) {
-    const escapedTitle = escapeAnkiQuery(title);
-    query = `deck:"${escapedDeck}" ("Word:${escapedLower}" or "Word:${escapedTitle}")`;
+  if (title === lower) {
+    return `deck:"${escapedDeck}" "Word:${escapedLower}"`;
   }
 
+  const escapedTitle = escapeAnkiQuery(title);
+  return `deck:"${escapedDeck}" ("Word:${escapedLower}" or "Word:${escapedTitle}")`;
+}
+
+export async function wordExistsInDeck(deckName: string, word: string): Promise<boolean> {
+  const query = buildDuplicateQuery(deckName, word);
   const notes = await ankiConnectRequest<number[]>('findNotes', { query });
   return notes.length > 0;
 }
