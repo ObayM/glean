@@ -5,7 +5,7 @@
   import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { setSettings } from '../../lib/storage';
-  import type { LlmProvider } from '../../lib/types';
+  import type { LlmProvider, LookupMode } from '../../lib/types';
 
   const TOTAL_STEPS = 5;
   const CONFETTI_COLORS = ['#6366f1', '#a855f7', '#d946ef', '#10b981', '#3b82f6'];
@@ -26,6 +26,7 @@
   };
 
   let currentStep = $state(0);
+  let lookupMode = $state<LookupMode>('ai');
   let llmProvider = $state<LlmProvider>('hackclub');
   let apiKey = $state('');
   let verifying = $state(false);
@@ -55,6 +56,10 @@
     if (index < 0 || index >= TOTAL_STEPS) return;
     currentStep = index;
     if (index === 4) triggerConfetti();
+  }
+
+  function selectLookupMode(next: LookupMode) {
+    lookupMode = next;
   }
 
   function selectProvider(next: LlmProvider) {
@@ -114,7 +119,7 @@
   }
 
   async function finish() {
-    await setSettings({ deckName: selectedDeck });
+    await setSettings({ lookupMode, deckName: selectedDeck });
     await browser.storage.local.set({ isConfigured: true });
     const tab = await browser.tabs.getCurrent();
     if (tab?.id) browser.tabs.remove(tab.id);
@@ -163,31 +168,55 @@
     </section>
 
     <section class="wizard-step" class:active={currentStep === 1}>
-      <h2>Connect to AI Translation</h2>
-      <p class="step-desc">Glean uses AI to translate words and write example sentences based on context. Get your free key in 30 seconds.</p>
-      <div class="form-group">
-        <label for="select-provider">AI Provider:</label>
-        <select id="select-provider" value={llmProvider} onchange={(e) => selectProvider(e.currentTarget.value as LlmProvider)}>
-          <option value="hackclub">Hack Club AI (Free, for teens)</option>
-          <option value="openrouter">OpenRouter (Bring your own key)</option>
-        </select>
+      <h2>How should Glean look up words?</h2>
+      <p class="step-desc">Choose AI-powered context definitions, or a plain dictionary lookup with no AI and no API key.</p>
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn" class:active={lookupMode === 'ai'} onclick={() => selectLookupMode('ai')}>
+          AI-Powered
+        </button>
+        <button type="button" class="mode-btn" class:active={lookupMode === 'dictionary'} onclick={() => selectLookupMode('dictionary')}>
+          Dictionary Only
+        </button>
       </div>
-      <div class="card-action-box">
-        <a href={PROVIDER_INFO[llmProvider].dashboardUrl} target="_blank" class="dashboard-btn">{PROVIDER_INFO[llmProvider].dashboardLabel}</a>
-      </div>
-      <div class="form-group">
-        <label for="input-api-key">Paste your {PROVIDER_INFO[llmProvider].label} API Key:</label>
-        <div class="input-row">
-          <input id="input-api-key" type="password" placeholder={PROVIDER_INFO[llmProvider].placeholder} bind:value={apiKey} />
-          <button type="button" class="secondary-btn" disabled={verifying} onclick={verifyKey}>Verify Key</button>
+
+      {#if lookupMode === 'ai'}
+        <p class="step-desc">Glean uses AI to translate words and write example sentences based on context. Get your free key in 30 seconds.</p>
+        <div class="form-group">
+          <label for="select-provider">AI Provider:</label>
+          <select id="select-provider" value={llmProvider} onchange={(e) => selectProvider(e.currentTarget.value as LlmProvider)}>
+            <option value="hackclub">Hack Club AI (Free, for teens)</option>
+            <option value="openrouter">OpenRouter (Bring your own key)</option>
+          </select>
         </div>
-        {#if apiStatus}
-          <span class="status-msg" class:status-success={apiStatus.type === 'success'} class:status-error={apiStatus.type === 'error'}>{apiStatus.msg}</span>
-        {/if}
-      </div>
+        <div class="card-action-box">
+          <a href={PROVIDER_INFO[llmProvider].dashboardUrl} target="_blank" class="dashboard-btn">{PROVIDER_INFO[llmProvider].dashboardLabel}</a>
+        </div>
+        <div class="form-group">
+          <label for="input-api-key">Paste your {PROVIDER_INFO[llmProvider].label} API Key:</label>
+          <div class="input-row">
+            <input id="input-api-key" type="password" placeholder={PROVIDER_INFO[llmProvider].placeholder} bind:value={apiKey} />
+            <button type="button" class="secondary-btn" disabled={verifying} onclick={verifyKey}>Verify Key</button>
+          </div>
+          {#if apiStatus}
+            <span class="status-msg" class:status-success={apiStatus.type === 'success'} class:status-error={apiStatus.type === 'error'}>{apiStatus.msg}</span>
+          {/if}
+        </div>
+      {:else}
+        <div class="checklist">
+          <div class="check-item">
+            <span class="bullet">&gt;</span>
+            <div>No API key needed — Glean pulls definitions straight from a free dictionary and lets you pick the right sense yourself.</div>
+          </div>
+          <div class="check-item">
+            <span class="bullet">&gt;</span>
+            <div>Works for English words only. You can switch to AI mode any time in Glean settings.</div>
+          </div>
+        </div>
+      {/if}
+
       <div class="actions-row">
         <button type="button" class="secondary-btn" onclick={() => goToStep(0)}>Back</button>
-        <button type="button" class="primary-btn" disabled={!hasVerifiedApiKey} onclick={() => goToStep(2)}>Next Step</button>
+        <button type="button" class="primary-btn" disabled={lookupMode === 'ai' && !hasVerifiedApiKey} onclick={() => goToStep(2)}>Next Step</button>
       </div>
     </section>
 
