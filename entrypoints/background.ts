@@ -1,8 +1,12 @@
 import {
+  DEFAULT_FIELD_MAPPING,
+  DEFAULT_NOTE_TYPE_NAME,
   addNote,
   ensureDeck,
   ensureNoteType,
   getDeckNames,
+  getModelFieldNames,
+  getModelNames,
   testConnection,
   wordExistsInDeck,
 } from '../lib/anki-connect';
@@ -136,42 +140,49 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   const { word, definition, meaning, sentence, example, language, audioUrl, pageUrl, force } = input;
   const settings = await getSettings();
   const deckName = settings.deckName || DEFAULT_DECK;
+  const noteTypeName = settings.noteTypeName || DEFAULT_NOTE_TYPE_NAME;
+  const mapping = settings.fieldMapping || DEFAULT_FIELD_MAPPING;
 
-  if (!noteTypeEnsured) {
-    await ensureNoteType();
-    noteTypeEnsured = true;
+  if (noteTypeName === DEFAULT_NOTE_TYPE_NAME) {
+    if (!noteTypeEnsured) {
+      await ensureNoteType();
+      noteTypeEnsured = true;
+    }
   }
   if (!ensuredDecks.has(deckName)) {
     await ensureDeck(deckName);
     ensuredDecks.add(deckName);
   }
 
-  if (!force && (await wordExistsInDeck(deckName, word))) {
+  const wordField = mapping.word || 'Word';
+  if (!force && (await wordExistsInDeck(deckName, word, wordField))) {
     return { status: 'duplicate' };
   }
 
-  const fields: Record<string, string> = {
-    Word: escapeHtml(word),
-    Meaning: meaning ? escapeHtml(meaning) : '',
-    Definition: escapeHtml(definition),
-    Sentence: sentence ? highlightToHtml(sentence, word) : '',
-    Example: example ? escapeHtml(example) : '',
-    Sound: '',
-    Image: '',
-    'Source URL': pageUrl ? escapeHtml(pageUrl) : '',
+  const fields: Record<string, string> = {};
+  const setField = (fieldName: string | undefined, value: string) => {
+    if (fieldName) fields[fieldName] = value;
   };
+  setField(wordField, escapeHtml(word));
+  setField(mapping.meaning, meaning ? escapeHtml(meaning) : '');
+  setField(mapping.definition || 'Definition', escapeHtml(definition));
+  setField(mapping.sentence, sentence ? highlightToHtml(sentence, word) : '');
+  setField(mapping.example, example ? escapeHtml(example) : '');
+  setField(mapping.sound, '');
+  setField(mapping.image, '');
+  setField(mapping.sourceUrl, pageUrl ? escapeHtml(pageUrl) : '');
 
   const audio = [];
-  if (audioUrl) {
+  if (audioUrl && mapping.sound) {
     const safeWord = word.toLowerCase().replace(/[^a-z0-9-]/g, '_');
     const base64Data = await fetchAudioAsBase64(audioUrl);
     if (base64Data) {
-      audio.push({ data: base64Data, filename: `glean_${safeWord}.mp3`, fields: ['Sound'] });
+      audio.push({ data: base64Data, filename: `glean_${safeWord}.mp3`, fields: [mapping.sound] });
     }
   }
 
   const tags = ['glean', `lang-${language || 'en'}`];
-  const noteId = await addNote(deckName, fields, tags, audio, Boolean(force));
+  const noteId = await addNote(deckName, noteTypeName, fields, tags, audio, Boolean(force));
 
   try {
     await recordAddedWord({ word, definition, meaning, sentence, example, timestamp: Date.now() });
@@ -224,6 +235,23 @@ export default defineBackground(() => {
     PLAY_AUDIO: async ({ audioUrl }) => {
       await playAudioOffscreen(audioUrl);
       return { success: true };
+    },
+    GET_NOTE_TYPES: async () => {
+      const models = await getModelNames();
+      const noteTypes = models.includes(DEFAULT_NOTE_TYPE_NAME)
+        ? models
+        : [DEFAULT_NOTE_TYPE_NAME, ...models];
+      return { noteTypes };
+    },
+    GET_NOTE_TYPE_FIELDS: async ({ noteTypeName }) => {
+      if (noteTypeName === DEFAULT_NOTE_TYPE_NAME) {
+        const models = await getModelNames();
+        if (!models.includes(DEFAULT_NOTE_TYPE_NAME)) {
+          return { fields: Object.values(DEFAULT_FIELD_MAPPING) };
+        }
+      }
+      const fields = await getModelFieldNames(noteTypeName);
+      return { fields };
     },
   });
 

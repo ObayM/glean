@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { DEFAULT_FIELD_MAPPING, DEFAULT_NOTE_TYPE_NAME } from './anki-connect';
 import type { DictionaryDefinition } from './audio-fetcher';
 import type { LlmProvider, RecentWord, Settings, Stats, WordData } from './types';
 
@@ -15,6 +16,8 @@ export const DEFAULT_SETTINGS: Settings = {
   openrouterModel: '',
   mwKey: '',
   deckName: DEFAULT_DECK,
+  noteTypeName: DEFAULT_NOTE_TYPE_NAME,
+  fieldMapping: DEFAULT_FIELD_MAPPING,
 };
 
 async function read<T>(defaults: T): Promise<T> {

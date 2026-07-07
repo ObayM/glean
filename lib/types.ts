@@ -1,3 +1,4 @@
+import type { GleanFieldKey } from './anki-connect';
 import type { DictionaryDefinition } from './audio-fetcher';
 import type { SerializedError } from './errors';
 
@@ -13,6 +14,8 @@ export interface Settings {
   openrouterModel: string;
   mwKey: string;
   deckName: string;
+  noteTypeName: string;
+  fieldMapping: Record<GleanFieldKey, string>;
 }
 
 export interface WordData {
@@ -100,6 +103,8 @@ export interface ProtocolMap {
   CREATE_DECK: { input: { deckName: string }; output: { success: true } };
   TEST_API_KEY: { input: TestKeyInput; output: TestKeyResult };
   PLAY_AUDIO: { input: { audioUrl: string }; output: { success: true } };
+  GET_NOTE_TYPES: { input: void; output: { noteTypes: string[] } };
+  GET_NOTE_TYPE_FIELDS: { input: { noteTypeName: string }; output: { fields: string[] } };
 }
 
 export type MessageType = keyof ProtocolMap;

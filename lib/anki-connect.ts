@@ -3,9 +3,43 @@ import { fetchWithTimeout } from './http';
 
 const ANKI_CONNECT_URL = 'http://127.0.0.1:8765';
 const ANKI_CONNECT_VERSION = 6;
-const MODEL_NAME = 'Glean Vocab';
-const MODEL_FIELDS = ['Word', 'Meaning', 'Definition', 'Sentence', 'Example', 'Sound', 'Image', 'Source URL'];
 const CARD_TEMPLATE_NAME = 'Glean Card';
+
+export const DEFAULT_NOTE_TYPE_NAME = 'Glean Vocab';
+
+export type GleanFieldKey =
+  | 'word'
+  | 'meaning'
+  | 'definition'
+  | 'sentence'
+  | 'example'
+  | 'sound'
+  | 'image'
+  | 'sourceUrl';
+
+export const GLEAN_FIELDS: { key: GleanFieldKey; label: string; required: boolean }[] = [
+  { key: 'word', label: 'Word', required: true },
+  { key: 'definition', label: 'Definition', required: true },
+  { key: 'meaning', label: 'Meaning', required: false },
+  { key: 'sentence', label: 'Context Sentence', required: false },
+  { key: 'example', label: 'Example', required: false },
+  { key: 'sound', label: 'Audio', required: false },
+  { key: 'image', label: 'Image', required: false },
+  { key: 'sourceUrl', label: 'Source URL', required: false },
+];
+
+export const DEFAULT_FIELD_MAPPING: Record<GleanFieldKey, string> = {
+  word: 'Word',
+  meaning: 'Meaning',
+  definition: 'Definition',
+  sentence: 'Sentence',
+  example: 'Example',
+  sound: 'Sound',
+  image: 'Image',
+  sourceUrl: 'Source URL',
+};
+
+const MODEL_FIELDS = Object.values(DEFAULT_FIELD_MAPPING);
 
 export const CARD_CSS = `
 .glean-card {
@@ -215,6 +249,10 @@ export function getModelNames(): Promise<string[]> {
   return ankiConnectRequest<string[]>('modelNames');
 }
 
+export function getModelFieldNames(modelName: string): Promise<string[]> {
+  return ankiConnectRequest<string[]>('modelFieldNames', { modelName });
+}
+
 export interface AnkiAudio {
   url?: string;
   data?: string;
@@ -224,6 +262,7 @@ export interface AnkiAudio {
 
 export async function addNote(
   deckName: string,
+  modelName: string,
   fields: Record<string, string>,
   tags: string[] = [],
   audio: AnkiAudio[] = [],
@@ -231,7 +270,7 @@ export async function addNote(
 ): Promise<number> {
   const note: Record<string, unknown> = {
     deckName,
-    modelName: MODEL_NAME,
+    modelName,
     fields,
     tags,
     options: { allowDuplicate, duplicateScope: 'deck' },
@@ -246,7 +285,7 @@ function escapeAnkiQuery(value: string): string {
   return value.replace(/["\\]/g, '\\$&');
 }
 
-export function buildDuplicateQuery(deckName: string, word: string): string {
+export function buildDuplicateQuery(deckName: string, word: string, wordField: string): string {
   const cleanWord = word.trim();
   const lower = cleanWord.toLowerCase();
   const title = cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1).toLowerCase();
@@ -255,24 +294,24 @@ export function buildDuplicateQuery(deckName: string, word: string): string {
   const escapedLower = escapeAnkiQuery(lower);
 
   if (title === lower) {
-    return `deck:"${escapedDeck}" "Word:${escapedLower}"`;
+    return `deck:"${escapedDeck}" "${wordField}:${escapedLower}"`;
   }
 
   const escapedTitle = escapeAnkiQuery(title);
-  return `deck:"${escapedDeck}" ("Word:${escapedLower}" or "Word:${escapedTitle}")`;
+  return `deck:"${escapedDeck}" ("${wordField}:${escapedLower}" or "${wordField}:${escapedTitle}")`;
 }
 
-export async function wordExistsInDeck(deckName: string, word: string): Promise<boolean> {
-  const query = buildDuplicateQuery(deckName, word);
+export async function wordExistsInDeck(deckName: string, word: string, wordField: string): Promise<boolean> {
+  const query = buildDuplicateQuery(deckName, word, wordField);
   const notes = await ankiConnectRequest<number[]>('findNotes', { query });
   return notes.length > 0;
 }
 
 export async function ensureNoteType(): Promise<void> {
   const models = await getModelNames();
-  if (!models.includes(MODEL_NAME)) {
+  if (!models.includes(DEFAULT_NOTE_TYPE_NAME)) {
     await ankiConnectRequest('createModel', {
-      modelName: MODEL_NAME,
+      modelName: DEFAULT_NOTE_TYPE_NAME,
       inOrderFields: MODEL_FIELDS,
       css: CARD_CSS,
       isCloze: false,
@@ -281,19 +320,22 @@ export async function ensureNoteType(): Promise<void> {
     return;
   }
 
-  const existingFields = await ankiConnectRequest<string[]>('modelFieldNames', { modelName: MODEL_NAME });
+  const existingFields = await getModelFieldNames(DEFAULT_NOTE_TYPE_NAME);
   if (!existingFields.includes('Meaning')) {
     const insertIndex = existingFields.indexOf('Definition');
     await ankiConnectRequest('modelFieldAdd', {
-      modelName: MODEL_NAME,
+      modelName: DEFAULT_NOTE_TYPE_NAME,
       fieldName: 'Meaning',
       index: insertIndex >= 0 ? insertIndex : existingFields.length,
     });
     await ankiConnectRequest('updateModelTemplates', {
-      model: { name: MODEL_NAME, templates: { [CARD_TEMPLATE_NAME]: { Front: CARD_FRONT, Back: CARD_BACK } } },
+      model: {
+        name: DEFAULT_NOTE_TYPE_NAME,
+        templates: { [CARD_TEMPLATE_NAME]: { Front: CARD_FRONT, Back: CARD_BACK } },
+      },
     });
     await ankiConnectRequest('updateModelStyling', {
-      model: { name: MODEL_NAME, css: CARD_CSS },
+      model: { name: DEFAULT_NOTE_TYPE_NAME, css: CARD_CSS },
     });
   }
 }
