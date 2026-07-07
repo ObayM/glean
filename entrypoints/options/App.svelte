@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { browser } from 'wxt/browser';
   import GlassFilter from '../../components/GlassFilter.svelte';
+  import { TRIGGER_COMMAND_ID } from '../../lib/constants';
   import { SUPPORTED_LANGUAGES } from '../../lib/languages';
   import { getDefaultModel } from '../../lib/llm-api';
   import { initLiquidGlass } from '../../lib/liquid-glass';
@@ -12,6 +13,7 @@
   const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
 
   let lookupMode = $state<LookupMode>('ai');
+  let shortcutLabel = $state('Not set');
   let provider = $state<LlmProvider>('hackclub');
   let hackclubApiKey = $state('');
   let hackclubModel = $state('');
@@ -50,6 +52,9 @@
     mwKey = s.mwKey;
     deckName = s.deckName;
     await testAnki();
+
+    const commands = await browser.commands.getAll();
+    shortcutLabel = commands.find((c) => c.name === TRIGGER_COMMAND_ID)?.shortcut || 'Not set';
   });
 
   async function save(notify = true) {
@@ -201,6 +206,17 @@
           An AI model reads the word's context, picks the best sense, writes a definition, and invents an example sentence. Supports {supportedLanguageNames}.
         {/if}
       </span>
+    </div>
+
+    <div class="settings-card glass-panel">
+      <h2><i class="fa-solid fa-keyboard"></i> Keyboard Shortcut</h2>
+      <div class="anki-status-area">
+        <div class="status-indicator-box">
+          <span class="status-label">Look up selection:</span>
+          <span class="badge badge-connected">{shortcutLabel}</span>
+        </div>
+      </div>
+      <span class="field-hint">Select a word on any page and press this shortcut to look it up — a faster alternative to right-clicking. Change it any time from your browser's extension shortcuts settings.</span>
     </div>
 
     {#if lookupMode === 'ai'}
