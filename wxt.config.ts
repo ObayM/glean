@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import { TRIGGER_COMMAND_ID } from './lib/constants';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
@@ -6,6 +7,12 @@ export default defineConfig({
     name: 'Glean',
     description: "Highlight a word → One click → It's in Anki",
     permissions: ['storage', 'activeTab', 'contextMenus', 'offscreen'],
+    commands: {
+      [TRIGGER_COMMAND_ID]: {
+        suggested_key: { default: 'Alt+Shift+G' },
+        description: 'Look up the selected word in Glean',
+      },
+    },
     host_permissions: [
       'http://127.0.0.1:8765/*',
       'https://ai.hackclub.com/*',

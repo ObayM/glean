@@ -281,6 +281,13 @@ export default defineContentScript({
         triggerContext(message.word);
       } else if (message.kind === 'PROMPT') {
         void showOverlay({ word: '', sentence: '', rects: null, centered: true, mode: 'prompt' });
+      } else if (message.kind === 'HOTKEY') {
+        const ctx = selectionContext();
+        if (ctx) {
+          void showOverlay({ word: ctx.word, sentence: ctx.sentence, rects: ctx.rects, centered: false });
+        } else {
+          void showOverlay({ word: '', sentence: '', rects: null, centered: true, mode: 'prompt' });
+        }
       }
     });
   },

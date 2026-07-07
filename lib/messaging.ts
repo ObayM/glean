@@ -60,7 +60,8 @@ export function registerHandlers(handlers: Handlers): void {
 
 export type ContentMessage =
   | { __gleanContent: true; kind: 'TRIGGER'; word: string }
-  | { __gleanContent: true; kind: 'PROMPT' };
+  | { __gleanContent: true; kind: 'PROMPT' }
+  | { __gleanContent: true; kind: 'HOTKEY' };
 
 export function sendToTab(tabId: number, message: ContentMessage): Promise<void> {
   return browser.tabs.sendMessage(tabId, message).then(

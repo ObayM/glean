@@ -7,6 +7,7 @@ import {
   wordExistsInDeck,
 } from '../lib/anki-connect';
 import { fetchAudio, fetchFreeDictionaryEntry } from '../lib/audio-fetcher';
+import { TRIGGER_COMMAND_ID } from '../lib/constants';
 import { AppError } from '../lib/errors';
 import { escapeHtml, highlightToHtml } from '../lib/highlight';
 import { fetchWithTimeout } from '../lib/http';
@@ -249,5 +250,10 @@ export default defineBackground(() => {
     } else {
       void sendToTab(tab.id, { __gleanContent: true, kind: 'PROMPT' });
     }
+  });
+
+  browser.commands.onCommand.addListener((command, tab) => {
+    if (command !== TRIGGER_COMMAND_ID || !tab?.id) return;
+    void sendToTab(tab.id, { __gleanContent: true, kind: 'HOTKEY' });
   });
 });
