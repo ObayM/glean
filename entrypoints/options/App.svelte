@@ -7,10 +7,11 @@
   import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { getSettings, setSettings } from '../../lib/storage';
-  import type { LlmProvider } from '../../lib/types';
+  import type { LlmProvider, LookupMode } from '../../lib/types';
 
   const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
 
+  let lookupMode = $state<LookupMode>('ai');
   let provider = $state<LlmProvider>('hackclub');
   let hackclubApiKey = $state('');
   let hackclubModel = $state('');
@@ -40,6 +41,7 @@
   onMount(async () => {
     initLiquidGlass();
     const s = await getSettings();
+    lookupMode = s.lookupMode;
     provider = s.llmProvider;
     hackclubApiKey = s.hackclubApiKey;
     hackclubModel = s.hackclubModel || getDefaultModel('hackclub');
@@ -52,6 +54,7 @@
 
   async function save(notify = true) {
     await setSettings({
+      lookupMode,
       llmProvider: provider,
       hackclubApiKey: hackclubApiKey.trim(),
       hackclubModel: hackclubModel.trim(),
@@ -72,6 +75,12 @@
     clearTimeout(toastTimer);
     toastVisible = true;
     toastTimer = setTimeout(() => (toastVisible = false), 2000);
+  }
+
+  function setLookupMode(next: LookupMode) {
+    if (lookupMode === next) return;
+    lookupMode = next;
+    void save(true);
   }
 
   function togglePassword(el: HTMLInputElement | undefined) {
@@ -141,6 +150,7 @@
     if (!confirm('Reset all configurations? This deletes your API keys and deck selection from the extension.')) return;
     await browser.storage.local.clear();
     const s = await getSettings();
+    lookupMode = s.lookupMode;
     provider = s.llmProvider;
     hackclubApiKey = s.hackclubApiKey;
     hackclubModel = getDefaultModel('hackclub');
@@ -164,6 +174,36 @@
   </header>
 
   <main class="settings-panel">
+    <div class="settings-card glass-panel">
+      <h2><i class="fa-solid fa-book-open"></i> Lookup Mode</h2>
+      <div class="mode-toggle">
+        <button
+          type="button"
+          class="mode-btn"
+          class:active={lookupMode === 'ai'}
+          onclick={() => setLookupMode('ai')}
+        >
+          <i class="fa-solid fa-robot"></i> AI-Powered
+        </button>
+        <button
+          type="button"
+          class="mode-btn"
+          class:active={lookupMode === 'dictionary'}
+          onclick={() => setLookupMode('dictionary')}
+        >
+          <i class="fa-solid fa-book"></i> Dictionary Only
+        </button>
+      </div>
+      <span class="field-hint">
+        {#if lookupMode === 'dictionary'}
+          Pulls definitions straight from a free dictionary — pick the sense that fits from a dropdown when you add a word. No API key needed. English words only.
+        {:else}
+          An AI model reads the word's context, picks the best sense, writes a definition, and invents an example sentence. Supports {supportedLanguageNames}.
+        {/if}
+      </span>
+    </div>
+
+    {#if lookupMode === 'ai'}
     <div class="settings-card glass-panel">
       <h2><i class="fa-solid fa-robot"></i> AI Provider</h2>
 
@@ -225,6 +265,7 @@
       </div>
       <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}. The dictionary-verified "Meaning" field is English-only — no free dictionary exists for the other languages.</span>
     </div>
+    {/if}
 
     <div class="settings-card glass-panel">
       <h2><i class="fa-solid fa-volume-high"></i> Pronunciation Audio</h2>

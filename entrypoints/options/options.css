@@ -113,6 +113,50 @@ body {
   margin: 20px 0;
 }
 
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-sm);
+  color: var(--body);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+}
+
+.mode-btn i {
+  font-size: 11px;
+  color: var(--body-subtle);
+}
+
+.mode-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.mode-btn.active {
+  background: var(--brand-soft) !important;
+  border-color: var(--border-brand) !important;
+  color: var(--brand-strong);
+}
+
+.mode-btn.active i {
+  color: var(--brand);
+}
+
 .form-group {
   margin-bottom: 20px;
 }
