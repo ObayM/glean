@@ -16,8 +16,10 @@ import {
   DEFAULT_DECK,
   DEFAULT_SETTINGS,
   activeCredentials,
+  getCachedDictionaryWord,
   getCachedWord,
   getSettings,
+  putCachedDictionaryWord,
   putCachedWord,
   recordAddedWord,
 } from '../lib/storage';
@@ -106,6 +108,11 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
 }
 
 async function handleLookupDictionary({ word, sentence, pageUrl }: ProcessWordInput): Promise<DictionaryLookup> {
+  const cached = await getCachedDictionaryWord(word);
+  if (cached) {
+    return { word, sentence, pageUrl, ...cached };
+  }
+
   const settings = await getSettings();
   const dictionaryEntry = await fetchFreeDictionaryEntry(word);
 
@@ -114,15 +121,14 @@ async function handleLookupDictionary({ word, sentence, pageUrl }: ProcessWordIn
   }
 
   const audioResult = await fetchAudio(word, settings.mwKey, 'en', dictionaryEntry);
-
-  return {
-    word,
-    sentence,
-    pageUrl,
+  const wordData = {
     phonetic: audioResult.phonetic,
     audioUrl: audioResult.audioUrl,
     senses: dictionaryEntry.definitions,
   };
+
+  await putCachedDictionaryWord(word, wordData);
+  return { word, sentence, pageUrl, ...wordData };
 }
 
 async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> {

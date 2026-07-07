@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import type { DictionaryDefinition } from './audio-fetcher';
 import type { LlmProvider, RecentWord, Settings, Stats, WordData } from './types';
 
 export const DEFAULT_DECK = 'Glean';
@@ -96,31 +97,48 @@ export function recordAddedWord(entry: RecentWord): Promise<void> {
   });
 }
 
-interface CacheState {
-  entries: Record<string, WordData>;
+interface LruCacheState<T> {
+  entries: Record<string, T>;
   order: string[];
 }
 
-const EMPTY_CACHE: CacheState = { entries: {}, order: [] };
+async function getLruEntry<T>(storageKey: string, key: string): Promise<T | null> {
+  const empty: LruCacheState<T> = { entries: {}, order: [] };
+  const result = await read({ [storageKey]: empty } as Record<string, LruCacheState<T>>);
+  return result[storageKey]!.entries[key] ?? null;
+}
 
-function cacheKey(provider: string, model: string, word: string, sentence: string): string {
+function putLruEntry<T>(storageKey: string, key: string, value: T): Promise<void> {
+  return enqueueWrite(async () => {
+    const empty: LruCacheState<T> = { entries: {}, order: [] };
+    const result = await read({ [storageKey]: empty } as Record<string, LruCacheState<T>>);
+    const cache = result[storageKey]!;
+
+    const order = cache.order.filter((k) => k !== key);
+    order.push(key);
+    const entries = { ...cache.entries, [key]: value };
+
+    while (order.length > CACHE_LIMIT) {
+      const evicted = order.shift();
+      if (evicted) delete entries[evicted];
+    }
+
+    await write({ [storageKey]: { entries, order } });
+  });
+}
+
+function llmCacheKey(provider: string, model: string, word: string, sentence: string): string {
   const normalizedSentence = sentence.trim().replace(/\s+/g, ' ');
   return `${provider}|${model}|${word.toLowerCase()}|${normalizedSentence}`;
 }
 
-async function getCache(): Promise<CacheState> {
-  const { llmCache } = await read({ llmCache: EMPTY_CACHE });
-  return llmCache;
-}
-
-export async function getCachedWord(
+export function getCachedWord(
   provider: string,
   model: string,
   word: string,
   sentence: string
 ): Promise<WordData | null> {
-  const cache = await getCache();
-  return cache.entries[cacheKey(provider, model, word, sentence)] ?? null;
+  return getLruEntry<WordData>('llmCache', llmCacheKey(provider, model, word, sentence));
 }
 
 export function putCachedWord(
@@ -130,20 +148,20 @@ export function putCachedWord(
   sentence: string,
   data: WordData
 ): Promise<void> {
-  return enqueueWrite(async () => {
-    const cache = await getCache();
-    const key = cacheKey(provider, model, word, sentence);
+  return putLruEntry<WordData>('llmCache', llmCacheKey(provider, model, word, sentence), data);
+}
 
-    const order = cache.order.filter((k) => k !== key);
-    order.push(key);
-    const entries = { ...cache.entries, [key]: data };
+export interface DictionaryWordData {
+  phonetic: string | null;
+  audioUrl: string | null;
+  senses: DictionaryDefinition[];
+}
 
-    while (order.length > CACHE_LIMIT) {
-      const evicted = order.shift();
-      if (evicted) delete entries[evicted];
-    }
+export function getCachedDictionaryWord(word: string): Promise<DictionaryWordData | null> {
+  return getLruEntry<DictionaryWordData>('dictionaryCache', word.trim().toLowerCase());
+}
 
-    await write({ llmCache: { entries, order } });
-  });
+export function putCachedDictionaryWord(word: string, data: DictionaryWordData): Promise<void> {
+  return putLruEntry<DictionaryWordData>('dictionaryCache', word.trim().toLowerCase(), data);
 }
 
