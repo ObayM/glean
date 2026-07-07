@@ -4,7 +4,7 @@
   import { splitByWord } from '../../lib/highlight';
   import { languageLabel } from '../../lib/languages';
   import { sendMessage } from '../../lib/messaging';
-  import type { WordData } from '../../lib/types';
+  import type { DictionaryLookup, LookupMode, WordData } from '../../lib/types';
   import { draggable, resizable } from './interactions';
 
   interface Props {
@@ -12,6 +12,7 @@
     sentence?: string;
     pageUrl?: string;
     mode?: 'lookup' | 'prompt';
+    lookupMode?: LookupMode;
     host: HTMLElement;
     ondismiss: () => void;
   }
@@ -21,6 +22,7 @@
     sentence = '',
     pageUrl = '',
     mode = 'lookup',
+    lookupMode = 'ai',
     host,
     ondismiss,
   }: Props = $props();
@@ -31,8 +33,12 @@
   let phase = $state<Phase>(mode === 'prompt' ? 'prompt' : 'loading');
   // svelte-ignore state_referenced_locally
   let word = $state(initialWord);
-  let data = $state<WordData | null>(null);
+  let aiData = $state<WordData | null>(null);
+  let dictResult = $state<DictionaryLookup | null>(null);
+  let selectedSense = $state(0);
+  let usedAiFallback = $state(false);
   let errorMsg = $state('');
+  let noEntry = $state(false);
   let adding = $state(false);
   let addError = $state('');
   let duplicate = $state(false);
@@ -40,6 +46,28 @@
 
   let inputEl = $state<HTMLInputElement>();
   let promptValue = $state('');
+
+  const effectiveMode = $derived<LookupMode>(usedAiFallback ? 'ai' : lookupMode);
+  const senses = $derived(dictResult?.senses ?? []);
+  const activeSense = $derived(senses[selectedSense] ?? null);
+
+  const data = $derived<WordData | null>(
+    effectiveMode === 'dictionary'
+      ? dictResult && activeSense
+        ? {
+            word: dictResult.word,
+            definition: activeSense.definition,
+            meaning: null,
+            example: activeSense.example ?? '',
+            language: 'en',
+            sentence: dictResult.sentence,
+            audioUrl: dictResult.audioUrl,
+            phonetic: dictResult.phonetic,
+            pageUrl: dictResult.pageUrl,
+          }
+        : null
+      : aiData
+  );
 
   const parts = $derived(data ? splitByWord(data.sentence, data.word) : []);
 
@@ -50,15 +78,38 @@
 
   async function process() {
     phase = 'loading';
+    errorMsg = '';
+    noEntry = false;
+
+    if (effectiveMode === 'dictionary') {
+      const res = await sendMessage('LOOKUP_DICTIONARY', { word, sentence, pageUrl });
+      if (!res.ok) {
+        errorMsg = friendlyMessage(res.error);
+        noEntry = res.error.code === 'NO_DICTIONARY_ENTRY';
+        phase = 'error';
+        return;
+      }
+      dictResult = res.data;
+      selectedSense = 0;
+      phase = 'preview';
+      if (dictResult.audioUrl) playAudio();
+      return;
+    }
+
     const res = await sendMessage('PROCESS_WORD', { word, sentence, pageUrl });
     if (!res.ok) {
       errorMsg = friendlyMessage(res.error);
       phase = 'error';
       return;
     }
-    data = res.data;
+    aiData = res.data;
     phase = 'preview';
-    if (data.audioUrl) playAudio();
+    if (aiData.audioUrl) playAudio();
+  }
+
+  function lookupWithAI() {
+    usedAiFallback = true;
+    void process();
   }
 
   function submitPrompt() {
@@ -138,7 +189,12 @@
       <div class="error-state">
         <div class="error-icon">[Error]</div>
         <div class="error-message">{errorMsg}</div>
-        <button class="btn-retry" onclick={ondismiss}>Dismiss</button>
+        <div class="error-actions">
+          {#if noEntry}
+            <button class="btn-retry" onclick={lookupWithAI}>Look up with AI</button>
+          {/if}
+          <button class="btn-retry" onclick={ondismiss}>Dismiss</button>
+        </div>
       </div>
     {:else if phase === 'prompt'}
       <div class="card-body">
@@ -178,6 +234,17 @@
           {#if data.phonetic}<div class="word-phonetic">{data.phonetic}</div>{/if}
         </div>
 
+        {#if effectiveMode === 'dictionary' && senses.length > 0}
+          <div class="sense-select-wrap">
+            <div class="context-label">Meaning</div>
+            <select class="sense-select" bind:value={selectedSense}>
+              {#each senses as sense, i}
+                <option value={i}>({sense.partOfSpeech || 'unknown'}) {sense.definition}</option>
+              {/each}
+            </select>
+          </div>
+        {/if}
+
         {#if data.meaning}
           <div class="meaning-text">{data.meaning}</div>
         {/if}
@@ -193,10 +260,12 @@
           <div class="context-text">"{#each parts as part}{#if part.hit}<b>{part.text}</b>{:else}{part.text}{/if}{/each}"</div>
         </div>
 
-        <div class="example-section">
-          <div class="context-label">AI Example</div>
-          <div class="context-text italic">"{data.example}"</div>
-        </div>
+        {#if data.example}
+          <div class="example-section">
+            <div class="context-label">{effectiveMode === 'dictionary' ? 'Example' : 'AI Example'}</div>
+            <div class="context-text italic">"{data.example}"</div>
+          </div>
+        {/if}
 
         {#if duplicate}
           <div class="dup-note">"{data.word}" is already in your deck.</div>

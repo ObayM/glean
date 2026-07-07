@@ -388,6 +388,34 @@ export const overlayStyles = `
 
   .btn-retry:hover { background: #D1241C; box-shadow: none !important; }
 
+  .error-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .sense-select-wrap {
+    margin-bottom: 10px;
+  }
+
+  .sense-select {
+    width: 100%;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    color: #1C1C1E;
+    font-family: inherit;
+    font-size: 12.5px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+
+  .sense-select:focus {
+    border-color: #007AFF;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
   .dup-note {
     font-size: 12px;
     color: #D67D00;

@@ -1,6 +1,7 @@
 import { mount, unmount } from 'svelte';
 import { onContentMessage } from '../../lib/messaging';
 import { extractSentence } from '../../lib/sentence';
+import { getSettings } from '../../lib/storage';
 import Card from './Card.svelte';
 import { overlayStyles } from './overlay-styles';
 
@@ -148,7 +149,7 @@ export default defineContentScript({
       }
       if (!sentence) sentence = `Context word: ${word}`;
 
-      showOverlay({ word, sentence, rects, centered: false });
+      void showOverlay({ word, sentence, rects, centered: false });
     }
 
     function positionHost(host: HTMLElement, rects: DOMRect | null, centered: boolean) {
@@ -215,8 +216,9 @@ export default defineContentScript({
       mode?: 'lookup' | 'prompt';
     }
 
-    function showOverlay({ word, sentence, rects, centered, mode = 'lookup' }: OverlayArgs) {
+    async function showOverlay({ word, sentence, rects, centered, mode = 'lookup' }: OverlayArgs) {
       dismiss();
+      const settings = await getSettings();
 
       const host = document.createElement('div');
       host.id = HOST_ID;
@@ -248,7 +250,15 @@ export default defineContentScript({
 
       activeComponent = mount(Card, {
         target: shadow,
-        props: { word, sentence, pageUrl: window.location.href, mode, host, ondismiss: dismiss },
+        props: {
+          word,
+          sentence,
+          pageUrl: window.location.href,
+          mode,
+          lookupMode: settings.lookupMode,
+          host,
+          ondismiss: dismiss,
+        },
       });
 
       if (rects) {
@@ -270,7 +280,7 @@ export default defineContentScript({
       if (message.kind === 'TRIGGER') {
         triggerContext(message.word);
       } else if (message.kind === 'PROMPT') {
-        showOverlay({ word: '', sentence: '', rects: null, centered: true, mode: 'prompt' });
+        void showOverlay({ word: '', sentence: '', rects: null, centered: true, mode: 'prompt' });
       }
     });
   },
