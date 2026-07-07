@@ -53,6 +53,7 @@ async function tryMerriamWebster(word: string, apiKey: string): Promise<AudioRes
 
 interface FreeDictDefinition {
   definition?: string;
+  example?: string;
 }
 
 interface FreeDictMeaning {
@@ -69,6 +70,7 @@ interface FreeDictEntry {
 export interface DictionaryDefinition {
   partOfSpeech: string;
   definition: string;
+  example: string | null;
 }
 
 export interface FreeDictionaryEntry {
@@ -111,7 +113,11 @@ export async function fetchFreeDictionaryEntry(word: string): Promise<FreeDictio
       for (const meaning of entry.meanings ?? []) {
         for (const def of meaning.definitions ?? []) {
           if (def.definition && definitions.length < MAX_DICTIONARY_DEFINITIONS) {
-            definitions.push({ partOfSpeech: meaning.partOfSpeech ?? '', definition: def.definition });
+            definitions.push({
+              partOfSpeech: meaning.partOfSpeech ?? '',
+              definition: def.definition,
+              example: def.example ?? null,
+            });
           }
         }
       }

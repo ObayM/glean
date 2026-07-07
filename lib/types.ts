@@ -1,8 +1,11 @@
+import type { DictionaryDefinition } from './audio-fetcher';
 import type { SerializedError } from './errors';
 
 export type LlmProvider = 'hackclub' | 'openrouter';
+export type LookupMode = 'ai' | 'dictionary';
 
 export interface Settings {
+  lookupMode: LookupMode;
   llmProvider: LlmProvider;
   hackclubApiKey: string;
   hackclubModel: string;
@@ -79,8 +82,18 @@ export interface TestKeyInput {
   model?: string;
 }
 
+export interface DictionaryLookup {
+  word: string;
+  sentence: string;
+  pageUrl: string;
+  phonetic: string | null;
+  audioUrl: string | null;
+  senses: DictionaryDefinition[];
+}
+
 export interface ProtocolMap {
   PROCESS_WORD: { input: ProcessWordInput; output: WordData };
+  LOOKUP_DICTIONARY: { input: ProcessWordInput; output: DictionaryLookup };
   ADD_TO_ANKI: { input: AddToAnkiInput; output: AddToAnkiResult };
   CHECK_ANKI: { input: void; output: AnkiStatus };
   GET_DECKS: { input: void; output: { decks: string[] } };

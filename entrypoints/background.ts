@@ -25,6 +25,7 @@ import type {
   AddToAnkiInput,
   AddToAnkiResult,
   AnkiStatus,
+  DictionaryLookup,
   OffscreenMessage,
   ProcessWordInput,
   TestKeyInput,
@@ -102,6 +103,26 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
   } finally {
     inFlightRequests.delete(key);
   }
+}
+
+async function handleLookupDictionary({ word, sentence, pageUrl }: ProcessWordInput): Promise<DictionaryLookup> {
+  const settings = await getSettings();
+  const dictionaryEntry = await fetchFreeDictionaryEntry(word);
+
+  if (dictionaryEntry.definitions.length === 0) {
+    throw new AppError('NO_DICTIONARY_ENTRY', `No dictionary entry found for "${word}".`);
+  }
+
+  const audioResult = await fetchAudio(word, settings.mwKey, 'en', dictionaryEntry);
+
+  return {
+    word,
+    sentence,
+    pageUrl,
+    phonetic: audioResult.phonetic,
+    audioUrl: audioResult.audioUrl,
+    senses: dictionaryEntry.definitions,
+  };
 }
 
 async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> {
@@ -184,6 +205,7 @@ async function playAudioOffscreen(audioUrl: string): Promise<void> {
 export default defineBackground(() => {
   registerHandlers({
     PROCESS_WORD: handleProcessWord,
+    LOOKUP_DICTIONARY: handleLookupDictionary,
     ADD_TO_ANKI: handleAddToAnki,
     CHECK_ANKI: handleCheckAnki,
     GET_DECKS: async () => ({ decks: await getDeckNames() }),

@@ -6,6 +6,7 @@ export type ErrorCode =
   | 'ANKI_UNREACHABLE'
   | 'ANKI_ERROR'
   | 'TIMEOUT'
+  | 'NO_DICTIONARY_ENTRY'
   | 'UNKNOWN';
 
 export interface SerializedError {
@@ -28,6 +29,7 @@ const FRIENDLY: Partial<Record<ErrorCode, string>> = {
   LLM_UNREACHABLE: 'Could not reach the AI provider. Check your connection and try again.',
   ANKI_UNREACHABLE: 'Anki desktop is offline. Open Anki and try again.',
   TIMEOUT: 'The request took too long. Try again in a moment.',
+  NO_DICTIONARY_ENTRY: 'No dictionary entry found for this word.',
 };
 
 export function friendlyMessage(err: SerializedError): string {

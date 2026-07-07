@@ -6,6 +6,7 @@ const MAX_RECENT = 20;
 const CACHE_LIMIT = 300;
 
 export const DEFAULT_SETTINGS: Settings = {
+  lookupMode: 'ai',
   llmProvider: 'hackclub',
   hackclubApiKey: '',
   hackclubModel: '',
