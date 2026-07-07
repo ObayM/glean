@@ -27,7 +27,7 @@
     const settings = await getSettings();
     const activeKey =
       settings.llmProvider === 'openrouter' ? settings.openrouterApiKey : settings.hackclubApiKey;
-    setupNeeded = !activeKey;
+    setupNeeded = settings.lookupMode === 'ai' && !activeKey;
     deckName = settings.deckName;
 
     const { recentWords: recents, stats } = await getHistory();
@@ -154,7 +154,7 @@
                 {/if}
                 {#if item.example}
                   <div class="detail-block">
-                    <div class="detail-label">AI Example</div>
+                    <div class="detail-label">Example</div>
                     <div class="detail-val italic">"{item.example}"</div>
                   </div>
                 {/if}
