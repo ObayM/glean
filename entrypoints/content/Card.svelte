@@ -4,6 +4,7 @@
   import { splitByWord } from '../../lib/highlight';
   import { languageLabel } from '../../lib/languages';
   import { sendMessage } from '../../lib/messaging';
+  import { cleanWord, wordTokens } from '../../lib/selection';
   import type { DictionaryLookup, LookupMode, WordData } from '../../lib/types';
   import { draggable, resizable } from './interactions';
 
@@ -11,7 +12,7 @@
     word?: string;
     sentence?: string;
     pageUrl?: string;
-    mode?: 'lookup' | 'prompt';
+    mode?: 'lookup' | 'prompt' | 'pickword';
     lookupMode?: LookupMode;
     host: HTMLElement;
     ondismiss: () => void;
@@ -27,10 +28,10 @@
     ondismiss,
   }: Props = $props();
 
-  type Phase = 'prompt' | 'loading' | 'preview' | 'error' | 'success';
+  type Phase = 'prompt' | 'pickword' | 'loading' | 'preview' | 'error' | 'success';
 
   // svelte-ignore state_referenced_locally
-  let phase = $state<Phase>(mode === 'prompt' ? 'prompt' : 'loading');
+  let phase = $state<Phase>(mode === 'prompt' ? 'prompt' : mode === 'pickword' ? 'pickword' : 'loading');
   // svelte-ignore state_referenced_locally
   let word = $state(initialWord);
   let aiData = $state<WordData | null>(null);
@@ -70,10 +71,11 @@
   );
 
   const parts = $derived(data ? splitByWord(data.sentence, data.word) : []);
+  const pickTokens = $derived(wordTokens(sentence));
 
   onMount(() => {
     if (mode === 'lookup') void process();
-    else queueMicrotask(() => inputEl?.focus());
+    else if (mode === 'prompt') queueMicrotask(() => inputEl?.focus());
   });
 
   async function process() {
@@ -109,6 +111,13 @@
 
   function lookupWithAI() {
     usedAiFallback = true;
+    void process();
+  }
+
+  function pickWord(token: string) {
+    const cleaned = cleanWord(token);
+    if (!cleaned) return;
+    word = cleaned;
     void process();
   }
 
@@ -196,6 +205,19 @@
           <button class="btn-retry" onclick={ondismiss}>Dismiss</button>
         </div>
       </div>
+    {:else if phase === 'pickword'}
+      <div class="card-body">
+        <div class="prompt-title">Which word do you mean?</div>
+        <div class="pickword-hint">Glean couldn't read this page's text, so pick the word to define from your selection.</div>
+        <div class="pickword-tokens">
+          {#each pickTokens as token}
+            <button type="button" class="pickword-token" onclick={() => pickWord(token)}>{token}</button>
+          {/each}
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn-action btn-dismiss" onclick={ondismiss}>Cancel</button>
+      </div>
     {:else if phase === 'prompt'}
       <div class="card-body">
         <div class="prompt-title">Add a word manually</div>
@@ -253,12 +275,14 @@
           <div class="definition-text">{data.definition}</div>
         </div>
 
-        <hr class="divider" />
+        {#if data.sentence}
+          <hr class="divider" />
 
-        <div class="context-section">
-          <div class="context-label">Context Sentence</div>
-          <div class="context-text">"{#each parts as part}{#if part.hit}<b>{part.text}</b>{:else}{part.text}{/if}{/each}"</div>
-        </div>
+          <div class="context-section">
+            <div class="context-label">Context Sentence</div>
+            <div class="context-text">"{#each parts as part}{#if part.hit}<b>{part.text}</b>{:else}{part.text}{/if}{/each}"</div>
+          </div>
+        {/if}
 
         {#if data.example}
           <div class="example-section">

@@ -17,6 +17,7 @@ import { escapeHtml, highlightToHtml } from '../lib/highlight';
 import { fetchWithTimeout } from '../lib/http';
 import { PROVIDERS, getDefaultModel, getWordData, testApiKey } from '../lib/llm-api';
 import { registerHandlers, sendToTab } from '../lib/messaging';
+import { normalizeSelection } from '../lib/selection';
 import {
   DEFAULT_DECK,
   DEFAULT_SETTINGS,
@@ -272,9 +273,9 @@ export default defineBackground(() => {
 
   browser.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== CONTEXT_MENU_ID || !tab?.id) return;
-    const word = info.selectionText ? info.selectionText.trim() : '';
-    if (word) {
-      void sendToTab(tab.id, { __gleanContent: true, kind: 'TRIGGER', word });
+    const selection = info.selectionText ? normalizeSelection(info.selectionText) : '';
+    if (selection) {
+      void sendToTab(tab.id, { __gleanContent: true, kind: 'TRIGGER', selection });
     } else {
       void sendToTab(tab.id, { __gleanContent: true, kind: 'PROMPT' });
     }

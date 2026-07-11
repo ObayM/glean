@@ -59,7 +59,7 @@ export function registerHandlers(handlers: Handlers): void {
 }
 
 export type ContentMessage =
-  | { __gleanContent: true; kind: 'TRIGGER'; word: string }
+  | { __gleanContent: true; kind: 'TRIGGER'; selection: string }
   | { __gleanContent: true; kind: 'PROMPT' }
   | { __gleanContent: true; kind: 'HOTKEY' };
 

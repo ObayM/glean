@@ -1,5 +1,6 @@
 import { mount, unmount } from 'svelte';
 import { onContentMessage } from '../../lib/messaging';
+import { cleanWord, wordTokens } from '../../lib/selection';
 import { extractSentence } from '../../lib/sentence';
 import { getSettings } from '../../lib/storage';
 import Card from './Card.svelte';
@@ -32,10 +33,12 @@ export default defineContentScript({
     let activeComponent: Record<string, unknown> | null = null;
     let lastRightClickTarget: EventTarget | null = null;
     let lastRightClickRange: Range | null = null;
+    let lastRightClickPoint: { x: number; y: number } | null = null;
 
     document.addEventListener('contextmenu', (event) => {
       lastRightClickTarget = event.composedPath()[0] ?? event.target;
       lastRightClickRange = caretRangeFromPoint(event.clientX, event.clientY);
+      lastRightClickPoint = { x: event.clientX, y: event.clientY };
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') dismiss();
@@ -106,7 +109,7 @@ export default defineContentScript({
       if (!selectedText) return null;
 
       const rawWord = selectedText.split(/\s+/)[0] ?? '';
-      const word = rawWord.replace(/[^\p{L}\p{M}\p{N}'-]/gu, '');
+      const word = cleanWord(rawWord);
       if (!word) return null;
 
       const range = selection.getRangeAt(0);
@@ -118,7 +121,7 @@ export default defineContentScript({
       return { word, sentence, rects };
     }
 
-    function triggerContext(word: string) {
+    function triggerContext(selection: string) {
       let sentence = '';
       let rects: DOMRect | null = null;
 
@@ -126,15 +129,15 @@ export default defineContentScript({
         const block = blockElementFor(lastRightClickRange.startContainer);
         const textContent = block.textContent ?? '';
         const wordOffset = textOffsetInBlock(block, lastRightClickRange.startContainer, lastRightClickRange.startOffset);
-        if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, word);
+        if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, selection);
         rects = lastRightClickRange.getBoundingClientRect();
       }
 
       if (!sentence && lastRightClickTarget instanceof Node) {
         const block = blockElementFor(lastRightClickTarget);
         const textContent = block.textContent ?? '';
-        const wordOffset = textContent.toLowerCase().indexOf(word.toLowerCase());
-        if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, word);
+        const wordOffset = textContent.toLowerCase().indexOf(selection.toLowerCase());
+        if (wordOffset >= 0) sentence = extractSentence(textContent, wordOffset, selection);
       }
       if (!rects && lastRightClickTarget instanceof Element) {
         rects = lastRightClickTarget.getBoundingClientRect();
@@ -147,9 +150,21 @@ export default defineContentScript({
           if (!rects) rects = ctx.rects;
         }
       }
-      if (!sentence) sentence = `Context word: ${word}`;
+      if (!rects && lastRightClickPoint) {
+        rects = new DOMRect(lastRightClickPoint.x, lastRightClickPoint.y, 0, 0);
+      }
 
-      void showOverlay({ word, sentence, rects, centered: false });
+      if (sentence) {
+        void showOverlay({ word: selection, sentence, rects, centered: false });
+        return;
+      }
+
+      const tokens = wordTokens(selection);
+      if (tokens.length > 1) {
+        void showOverlay({ word: '', sentence: selection, rects, centered: false, mode: 'pickword' });
+      } else {
+        void showOverlay({ word: cleanWord(selection), sentence: '', rects, centered: false });
+      }
     }
 
     function positionHost(host: HTMLElement, rects: DOMRect | null, centered: boolean) {
@@ -213,7 +228,7 @@ export default defineContentScript({
       sentence: string;
       rects: DOMRect | null;
       centered: boolean;
-      mode?: 'lookup' | 'prompt';
+      mode?: 'lookup' | 'prompt' | 'pickword';
     }
 
     async function showOverlay({ word, sentence, rects, centered, mode = 'lookup' }: OverlayArgs) {
@@ -278,7 +293,7 @@ export default defineContentScript({
 
     onContentMessage((message) => {
       if (message.kind === 'TRIGGER') {
-        triggerContext(message.word);
+        triggerContext(message.selection);
       } else if (message.kind === 'PROMPT') {
         void showOverlay({ word: '', sentence: '', rects: null, centered: true, mode: 'prompt' });
       } else if (message.kind === 'HOTKEY') {

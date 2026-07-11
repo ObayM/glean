@@ -463,6 +463,37 @@ export const overlayStyles = `
     overflow-y: auto;
   }
 
+  .pickword-hint {
+    font-size: 11px;
+    color: #8E8E93;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .pickword-tokens {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pickword-token {
+    font-family: inherit;
+    font-size: 12.5px;
+    color: #1C1C1E;
+    background: rgba(0, 122, 255, 0.06);
+    border: 1px solid rgba(0, 122, 255, 0.12);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pickword-token:hover {
+    background: #007AFF;
+    color: white;
+    border-color: transparent;
+  }
+
   .card-resizer {
     position: absolute;
     right: 0;
