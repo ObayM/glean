@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   deckName: DEFAULT_DECK,
   noteTypeName: DEFAULT_NOTE_TYPE_NAME,
   fieldMapping: DEFAULT_FIELD_MAPPING,
+  cardFontSize: 'large',
 };
 
 async function read<T>(defaults: T): Promise<T> {

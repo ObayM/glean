@@ -1,4 +1,5 @@
 import { mount, unmount } from 'svelte';
+import { CARD_FONT_SIZE_PX } from '../../lib/constants';
 import { onContentMessage } from '../../lib/messaging';
 import { cleanWord, wordTokens } from '../../lib/selection';
 import { extractSentence } from '../../lib/sentence';
@@ -168,16 +169,15 @@ export default defineContentScript({
     }
 
     function positionHost(host: HTMLElement, rects: DOMRect | null, centered: boolean) {
+      host.style.position = 'fixed';
       if (centered || !rects) {
-        host.style.position = 'fixed';
         host.style.left = '50%';
         host.style.top = '50%';
         host.style.transform = 'translate(-50%, -50%) scale(0.8)';
         return;
       }
-      const x = window.scrollX + rects.left + rects.width / 2;
-      const y = window.scrollY + rects.top - 8;
-      host.style.position = 'absolute';
+      const x = rects.left + rects.width / 2;
+      const y = rects.top - 8;
       host.style.left = `${x}px`;
       host.style.top = `${y}px`;
       host.style.transform = 'translate(-50%, -100%) scale(0.8)';
@@ -246,9 +246,9 @@ export default defineContentScript({
         overflow: 'visible',
         zIndex: '2147483647',
         pointerEvents: 'auto',
-        fontSize: '16px',
         lineHeight: '1.5',
       });
+      host.style.setProperty('--glean-font-size', `${CARD_FONT_SIZE_PX[settings.cardFontSize]}px`);
       document.body.appendChild(host);
       activeHost = host;
 
@@ -284,7 +284,7 @@ export default defineContentScript({
           if (r.right > window.innerWidth) host.style.left = `${window.innerWidth - r.width / 2 - 16}px`;
           if (r.left < 0) host.style.left = `${r.width / 2 + 16}px`;
           if (r.top < 16) {
-            host.style.top = `${window.scrollY + rects.bottom + 8}px`;
+            host.style.top = `${rects.bottom + 8}px`;
             host.style.transform = 'translate(-50%, 0) scale(0.8)';
           }
         }, 10);

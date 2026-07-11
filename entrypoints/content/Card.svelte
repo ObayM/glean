@@ -6,7 +6,7 @@
   import { sendMessage } from '../../lib/messaging';
   import { cleanWord, wordTokens } from '../../lib/selection';
   import type { DictionaryLookup, LookupMode, WordData } from '../../lib/types';
-  import { draggable, resizable } from './interactions';
+  import { draggable } from './interactions';
 
   interface Props {
     word?: string;
@@ -312,7 +312,5 @@
         {/if}
       </div>
     {/if}
-
-    <div class="card-resizer" use:resizable></div>
   </div>
 {/if}

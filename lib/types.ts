@@ -4,6 +4,7 @@ import type { SerializedError } from './errors';
 
 export type LlmProvider = 'hackclub' | 'openrouter';
 export type LookupMode = 'ai' | 'dictionary';
+export type CardFontSize = 'small' | 'medium' | 'large' | 'xlarge';
 
 export interface Settings {
   lookupMode: LookupMode;
@@ -16,6 +17,7 @@ export interface Settings {
   deckName: string;
   noteTypeName: string;
   fieldMapping: Record<GleanFieldKey, string>;
+  cardFontSize: CardFontSize;
 }
 
 export interface WordData {

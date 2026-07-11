@@ -13,6 +13,7 @@ export const overlayStyles = `
 
   :host {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Outfit', sans-serif;
+    font-size: var(--glean-font-size, 16px);
     box-sizing: border-box;
   }
 
@@ -21,7 +22,7 @@ export const overlayStyles = `
   }
 
   .glean-card {
-    width: 340px;
+    width: calc(var(--glean-font-size) * 21.25);
     background: rgba(255, 255, 255, 0.45) !important;
     backdrop-filter: url(#liquid-refraction) blur(40px) saturate(210%) !important;
     -webkit-backdrop-filter: url(#liquid-refraction) blur(40px) saturate(210%) !important;
@@ -85,7 +86,7 @@ export const overlayStyles = `
   }
 
   .brand-logo {
-    font-size: 11px;
+    font-size: calc(var(--glean-font-size) * 0.6875);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -103,7 +104,7 @@ export const overlayStyles = `
     background: rgba(0, 0, 0, 0.04);
     border: none;
     color: #55565A;
-    font-size: 14px;
+    font-size: calc(var(--glean-font-size) * 0.875);
     cursor: pointer;
     padding: 0;
     line-height: 1;
@@ -127,7 +128,7 @@ export const overlayStyles = `
   }
 
   .word-text {
-    font-size: 20px;
+    font-size: calc(var(--glean-font-size) * 1.25);
     font-weight: 750;
     color: #1C1C1E;
     letter-spacing: -0.01em;
@@ -140,7 +141,7 @@ export const overlayStyles = `
   }
 
   .lang-badge {
-    font-size: 10px;
+    font-size: calc(var(--glean-font-size) * 0.625);
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -174,14 +175,14 @@ export const overlayStyles = `
   }
 
   .word-phonetic {
-    font-size: 11px;
+    font-size: calc(var(--glean-font-size) * 0.6875);
     color: #8E8E93;
     font-family: "JetBrains Mono", monospace;
     margin-top: 4px;
   }
 
   .meaning-text {
-    font-size: 12px;
+    font-size: calc(var(--glean-font-size) * 0.75);
     font-style: italic;
     color: #6E6E73;
     margin-bottom: 10px;
@@ -199,7 +200,7 @@ export const overlayStyles = `
   }
 
   .definition-text {
-    font-size: 13px;
+    font-size: calc(var(--glean-font-size) * 0.8125);
     line-height: 1.45;
     color: #1C1C1E;
   }
@@ -213,7 +214,7 @@ export const overlayStyles = `
   .context-section, .example-section { margin-bottom: 10px; }
 
   .context-label {
-    font-size: 10px;
+    font-size: calc(var(--glean-font-size) * 0.625);
     font-weight: 700;
     text-transform: uppercase;
     color: #8E8E93;
@@ -222,7 +223,7 @@ export const overlayStyles = `
   }
 
   .context-text {
-    font-size: 12.5px;
+    font-size: calc(var(--glean-font-size) * 0.78125);
     line-height: 1.45;
     color: #3A3A3C;
   }
@@ -248,7 +249,7 @@ export const overlayStyles = `
     flex: 1;
     padding: 8px 12px;
     font-family: inherit;
-    font-size: 11px;
+    font-size: calc(var(--glean-font-size) * 0.6875);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -309,7 +310,7 @@ export const overlayStyles = `
   }
 
   .loading-text {
-    font-size: 10px;
+    font-size: calc(var(--glean-font-size) * 0.625);
     color: #8E8E93;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -354,7 +355,7 @@ export const overlayStyles = `
   }
 
   .error-icon {
-    font-size: 10px;
+    font-size: calc(var(--glean-font-size) * 0.625);
     font-weight: 700;
     color: #FF3B30;
     border: 1px solid rgba(255, 59, 48, 0.2);
@@ -367,7 +368,7 @@ export const overlayStyles = `
   }
 
   .error-message {
-    font-size: 12.5px;
+    font-size: calc(var(--glean-font-size) * 0.78125);
     color: #FF3B30;
     margin-bottom: 14px;
     line-height: 1.45;
@@ -377,7 +378,7 @@ export const overlayStyles = `
     background: #FF3B30;
     color: #FFFFFF;
     padding: 6px 14px;
-    font-size: 10px;
+    font-size: calc(var(--glean-font-size) * 0.625);
     font-weight: 600;
     text-transform: uppercase;
     border-radius: 8px;
@@ -405,7 +406,7 @@ export const overlayStyles = `
     border-radius: 8px;
     color: #1C1C1E;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: calc(var(--glean-font-size) * 0.78125);
     outline: none;
     box-sizing: border-box;
     transition: all 0.2s ease;
@@ -417,7 +418,7 @@ export const overlayStyles = `
   }
 
   .dup-note {
-    font-size: 12px;
+    font-size: calc(var(--glean-font-size) * 0.75);
     color: #D67D00;
     background: rgba(255, 149, 0, 0.1);
     border: 1px solid rgba(255, 149, 0, 0.2);
@@ -428,7 +429,7 @@ export const overlayStyles = `
   }
 
   .prompt-title {
-    font-size: 14px;
+    font-size: calc(var(--glean-font-size) * 0.875);
     font-weight: 700;
     color: #1C1C1E;
     margin-bottom: 12px;
@@ -447,7 +448,7 @@ export const overlayStyles = `
     border-radius: 8px;
     color: #1C1C1E;
     font-family: inherit;
-    font-size: 14px;
+    font-size: calc(var(--glean-font-size) * 0.875);
     outline: none;
     box-sizing: border-box;
     transition: all 0.2s ease;
@@ -464,7 +465,7 @@ export const overlayStyles = `
   }
 
   .pickword-hint {
-    font-size: 11px;
+    font-size: calc(var(--glean-font-size) * 0.6875);
     color: #8E8E93;
     margin-bottom: 10px;
     line-height: 1.4;
@@ -478,7 +479,7 @@ export const overlayStyles = `
 
   .pickword-token {
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: calc(var(--glean-font-size) * 0.78125);
     color: #1C1C1E;
     background: rgba(0, 122, 255, 0.06);
     border: 1px solid rgba(0, 122, 255, 0.12);
@@ -494,20 +495,4 @@ export const overlayStyles = `
     border-color: transparent;
   }
 
-  .card-resizer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 14px;
-    height: 14px;
-    cursor: se-resize;
-    background: linear-gradient(135deg, transparent 45%, #8e8e93 45%, transparent 55%, #8e8e93 55%, transparent 100%);
-    background-size: 5px 5px;
-    opacity: 0.4;
-    transition: opacity 0.2s ease;
-    z-index: 100;
-    border-bottom-right-radius: 14px;
-  }
-
-  .card-resizer:hover { opacity: 0.8; }
 `;

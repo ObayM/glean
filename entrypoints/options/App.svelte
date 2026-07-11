@@ -10,7 +10,7 @@
   import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { getSettings, setSettings } from '../../lib/storage';
-  import type { LlmProvider, LookupMode } from '../../lib/types';
+  import type { CardFontSize, LlmProvider, LookupMode } from '../../lib/types';
 
   const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
 
@@ -29,6 +29,7 @@
   let mwKey = $state('');
   let deckName = $state('Glean');
   let decks = $state<string[]>(['Glean']);
+  let cardFontSize = $state<CardFontSize>('large');
 
   let ankiStatus = $state<'checking' | 'connected' | 'offline'>('checking');
   let keyStatus = $state<{ msg: string; type: 'success' | 'error' | 'checking' } | null>(null);
@@ -60,6 +61,7 @@
     deckName = s.deckName;
     noteTypeName = s.noteTypeName || DEFAULT_NOTE_TYPE_NAME;
     fieldMapping = { ...DEFAULT_FIELD_MAPPING, ...s.fieldMapping };
+    cardFontSize = s.cardFontSize;
     await testAnki();
 
     const commands = await browser.commands.getAll();
@@ -78,6 +80,7 @@
       deckName,
       noteTypeName,
       fieldMapping,
+      cardFontSize,
     });
     if (notify) showToast();
   }
@@ -217,6 +220,7 @@
     deckName = s.deckName;
     noteTypeName = s.noteTypeName;
     fieldMapping = s.fieldMapping;
+    cardFontSize = s.cardFontSize;
     noteTypeFields = [];
     showToast();
   }
@@ -272,6 +276,20 @@
         </div>
       </div>
       <span class="field-hint">Select a word on any page and press this shortcut to look it up — a faster alternative to right-clicking. Change it any time from your browser's extension shortcuts settings.</span>
+    </div>
+
+    <div class="settings-card glass-panel">
+      <h2><i class="fa-solid fa-text-height"></i> Card Appearance</h2>
+      <div class="form-group">
+        <label for="select-card-font-size">Font Size</label>
+        <select id="select-card-font-size" bind:value={cardFontSize} onchange={() => void save(true)}>
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+          <option value="xlarge">Extra Large</option>
+        </select>
+        <span class="field-hint">Controls the text size of the lookup card shown on the page when you look up a word.</span>
+      </div>
     </div>
 
     {#if lookupMode === 'ai'}
