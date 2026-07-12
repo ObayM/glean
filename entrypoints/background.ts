@@ -254,6 +254,10 @@ export default defineBackground(() => {
       const fields = await getModelFieldNames(noteTypeName);
       return { fields };
     },
+    CAPTURE_BACKDROP: async () => {
+      const dataUrl = await browser.tabs.captureVisibleTab({ format: 'jpeg', quality: 85 });
+      return { dataUrl };
+    },
   });
 
   browser.runtime.onInstalled.addListener((details) => {

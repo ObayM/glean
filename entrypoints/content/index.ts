@@ -1,6 +1,6 @@
 import { mount, unmount } from 'svelte';
 import { CARD_FONT_SIZE_PX } from '../../lib/constants';
-import { onContentMessage } from '../../lib/messaging';
+import { onContentMessage, sendMessage } from '../../lib/messaging';
 import { cleanWord, wordTokens } from '../../lib/selection';
 import { extractSentence } from '../../lib/sentence';
 import { getSettings } from '../../lib/storage';
@@ -231,9 +231,15 @@ export default defineContentScript({
       mode?: 'lookup' | 'prompt' | 'pickword';
     }
 
+    async function captureBackdrop(): Promise<string> {
+      const res = await sendMessage('CAPTURE_BACKDROP', undefined);
+      return res.ok ? res.data.dataUrl : '';
+    }
+
     async function showOverlay({ word, sentence, rects, centered, mode = 'lookup' }: OverlayArgs) {
       dismiss();
       const settings = await getSettings();
+      const backdropUrl = await captureBackdrop();
 
       const host = document.createElement('div');
       host.id = HOST_ID;
@@ -271,6 +277,7 @@ export default defineContentScript({
           pageUrl: window.location.href,
           mode,
           lookupMode: settings.lookupMode,
+          backdropUrl,
           host,
           ondismiss: dismiss,
         },

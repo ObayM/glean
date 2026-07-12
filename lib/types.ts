@@ -107,6 +107,7 @@ export interface ProtocolMap {
   PLAY_AUDIO: { input: { audioUrl: string }; output: { success: true } };
   GET_NOTE_TYPES: { input: void; output: { noteTypes: string[] } };
   GET_NOTE_TYPE_FIELDS: { input: { noteTypeName: string }; output: { fields: string[] } };
+  CAPTURE_BACKDROP: { input: void; output: { dataUrl: string } };
 }
 
 export type MessageType = keyof ProtocolMap;

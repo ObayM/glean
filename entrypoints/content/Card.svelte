@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { friendlyMessage } from '../../lib/errors';
   import { splitByWord } from '../../lib/highlight';
   import { languageLabel } from '../../lib/languages';
@@ -7,6 +7,7 @@
   import { cleanWord, wordTokens } from '../../lib/selection';
   import type { DictionaryLookup, LookupMode, WordData } from '../../lib/types';
   import { draggable } from './interactions';
+  import { LiquidGlassRenderer } from './liquid-glass/renderer';
 
   interface Props {
     word?: string;
@@ -14,6 +15,7 @@
     pageUrl?: string;
     mode?: 'lookup' | 'prompt' | 'pickword';
     lookupMode?: LookupMode;
+    backdropUrl?: string;
     host: HTMLElement;
     ondismiss: () => void;
   }
@@ -24,9 +26,94 @@
     pageUrl = '',
     mode = 'lookup',
     lookupMode = 'ai',
+    backdropUrl = '',
     host,
     ondismiss,
   }: Props = $props();
+
+  const GLASS_MARGIN = 40;
+  let glCanvas = $state<HTMLCanvasElement>();
+  let cardEl = $state<HTMLElement>();
+  let glActive = $state(false);
+  let glRenderer: LiquidGlassRenderer | null = null;
+  let glStarted = false;
+  let glRaf = 0;
+  let glLastSig = '';
+  let captureScrollX = 0;
+  let captureScrollY = 0;
+
+  function layoutGlass() {
+    glRaf = requestAnimationFrame(layoutGlass);
+    const renderer = glRenderer;
+    const canvas = glCanvas;
+    const card = cardEl;
+    if (!renderer || !canvas || !card) return;
+
+    const w = card.offsetWidth;
+    const h = card.offsetHeight;
+    if (w === 0 || h === 0) return;
+
+    const boxW = w + GLASS_MARGIN * 2;
+    const boxH = h + GLASS_MARGIN * 2;
+    canvas.style.left = `${-GLASS_MARGIN}px`;
+    canvas.style.top = `${-GLASS_MARGIN}px`;
+    canvas.style.width = `${boxW}px`;
+    canvas.style.height = `${boxH}px`;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const iw = window.innerWidth;
+    const ih = window.innerHeight;
+    const dx = window.scrollX - captureScrollX;
+    const dy = window.scrollY - captureScrollY;
+    const sig = `${rect.left}|${rect.top}|${rect.width}|${rect.height}|${dpr}|${dx}|${dy}`;
+    if (sig === glLastSig) return;
+    glLastSig = sig;
+
+    renderer.setLayout({
+      canvasCssWidth: boxW,
+      canvasCssHeight: boxH,
+      shapeCssWidth: w,
+      shapeCssHeight: h,
+      radiusCss: 14,
+      dpr,
+      bgOffset: [(rect.left + dx) / iw, 1 - (rect.top + rect.height + dy) / ih],
+      bgScale: [rect.width / iw, rect.height / ih],
+    });
+    renderer.render();
+  }
+
+  function startGlass() {
+    if (glStarted || !backdropUrl || !glCanvas) return;
+    glStarted = true;
+    try {
+      glRenderer = new LiquidGlassRenderer(glCanvas);
+    } catch {
+      glRenderer = null;
+      return;
+    }
+    captureScrollX = window.scrollX;
+    captureScrollY = window.scrollY;
+    const img = new Image();
+    img.onload = () => {
+      if (!glRenderer) return;
+      glRenderer.setBackdrop(img);
+      glActive = true;
+      glLastSig = '';
+      if (!glRaf) glRaf = requestAnimationFrame(layoutGlass);
+    };
+    img.src = backdropUrl;
+  }
+
+  $effect(() => {
+    if (glCanvas && backdropUrl && !glStarted) startGlass();
+  });
+
+  onDestroy(() => {
+    if (glRaf) cancelAnimationFrame(glRaf);
+    glRenderer?.dispose();
+    glRenderer = null;
+  });
 
   type Phase = 'prompt' | 'pickword' | 'loading' | 'preview' | 'error' | 'success';
 
@@ -188,7 +275,8 @@
     </div>
   </div>
 {:else}
-  <div class="glean-card {phase === 'error' ? 'is-error' : ''}">
+  <div class="glean-card {phase === 'error' ? 'is-error' : ''}" class:has-gl={glActive} bind:this={cardEl}>
+    <canvas class="glean-gl" bind:this={glCanvas}></canvas>
     <div class="card-header">
       <span class="brand-logo" use:draggable={host}>Glean</span>
       <button class="btn-close" title="Dismiss (Esc)" onclick={ondismiss}>&times;</button>

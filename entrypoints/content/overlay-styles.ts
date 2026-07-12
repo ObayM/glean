@@ -495,4 +495,25 @@ export const overlayStyles = `
     border-color: transparent;
   }
 
+  .glean-gl {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    display: block;
+  }
+
+  .glean-card.has-gl {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .glean-card.has-gl > *:not(.glean-gl) {
+    position: relative;
+    z-index: 1;
+  }
+
 `;
