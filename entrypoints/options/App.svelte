@@ -11,8 +11,41 @@
   import { sendMessage } from '../../lib/messaging';
   import { getSettings, setSettings } from '../../lib/storage';
   import type { CardFontSize, LlmProvider, LookupMode } from '../../lib/types';
+  import {
+    Bot,
+    BookOpen,
+    CircleCheck,
+    CircleX,
+    ExternalLink,
+    Eye,
+    EyeOff,
+    Keyboard,
+    LoaderCircle,
+    Plug,
+    Plus,
+    RefreshCw,
+    Settings2,
+    Sparkles,
+    Trash2,
+    TriangleAlert,
+    Type,
+    Volume2,
+    X,
+  } from '@lucide/svelte';
+
+  type Section = 'general' | 'ai' | 'audio' | 'anki' | 'danger';
+
+  const NAV: { id: Section; label: string; icon: typeof Settings2 }[] = [
+    { id: 'general', label: 'General', icon: Settings2 },
+    { id: 'ai', label: 'AI Provider', icon: Sparkles },
+    { id: 'audio', label: 'Pronunciation Audio', icon: Volume2 },
+    { id: 'anki', label: 'Anki Integration', icon: Plug },
+    { id: 'danger', label: 'Danger Zone', icon: TriangleAlert },
+  ];
 
   const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
+
+  let section = $state<Section>('general');
 
   let lookupMode = $state<LookupMode>('ai');
   let shortcutLabel = $state('Not set');
@@ -41,9 +74,9 @@
   let creating = $state(false);
   let dialogError = $state('');
 
-  let hcKeyEl = $state<HTMLInputElement>();
-  let orKeyEl = $state<HTMLInputElement>();
-  let mwKeyEl = $state<HTMLInputElement>();
+  let hcKeyVisible = $state(false);
+  let orKeyVisible = $state(false);
+  let mwKeyVisible = $state(false);
 
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -100,11 +133,6 @@
     if (lookupMode === next) return;
     lookupMode = next;
     void save(true);
-  }
-
-  function togglePassword(el: HTMLInputElement | undefined) {
-    if (!el) return;
-    el.type = el.type === 'password' ? 'text' : 'password';
   }
 
   async function testKey() {
@@ -224,235 +252,327 @@
     noteTypeFields = [];
     showToast();
   }
+
+  function goToGeneral() {
+    lookupMode = 'ai';
+    section = 'general';
+    void save(true);
+  }
 </script>
 
 <GlassFilter />
 
-<div class="options-container">
-  <header class="header">
-    <div class="brand">
+<div class="settings-shell">
+  <aside class="sidebar glass-panel">
+    <div class="sidebar-brand">
       <img src="/icons/icon48.png" alt="" class="brand-icon" />
-      <h1>Glean Settings</h1>
-    </div>
-    <span class="version">v1.0.0</span>
-  </header>
-
-  <main class="settings-panel">
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-book-open"></i> Lookup Mode</h2>
-      <div class="mode-toggle">
-        <button
-          type="button"
-          class="mode-btn"
-          class:active={lookupMode === 'ai'}
-          onclick={() => setLookupMode('ai')}
-        >
-          <i class="fa-solid fa-robot"></i> AI-Powered
-        </button>
-        <button
-          type="button"
-          class="mode-btn"
-          class:active={lookupMode === 'dictionary'}
-          onclick={() => setLookupMode('dictionary')}
-        >
-          <i class="fa-solid fa-book"></i> Dictionary Only
-        </button>
+      <div class="brand-text">
+        <span class="brand-name">Glean</span>
+        <span class="brand-version">Settings</span>
       </div>
-      <span class="field-hint">
-        {#if lookupMode === 'dictionary'}
-          Pulls definitions straight from a free dictionary — pick the sense that fits from a dropdown when you add a word. No API key needed. English words only.
+    </div>
+
+    <nav class="sidebar-nav">
+      {#each NAV as item}
+        <button
+          type="button"
+          class="nav-item"
+          class:active={section === item.id}
+          class:danger={item.id === 'danger'}
+          onclick={() => (section = item.id)}
+        >
+          <item.icon size={16} strokeWidth={1.75} />
+          {item.label}
+        </button>
+      {/each}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="anki-pill" class:pill-connected={ankiStatus === 'connected'} class:pill-offline={ankiStatus === 'offline'}>
+        {#if ankiStatus === 'checking'}
+          <LoaderCircle size={13} class="spin" />
+          <span>Checking Anki...</span>
+        {:else if ankiStatus === 'connected'}
+          <CircleCheck size={13} />
+          <span>Anki Connected</span>
         {:else}
-          An AI model reads the word's context, picks the best sense, writes a definition, and invents an example sentence. Supports {supportedLanguageNames}.
-        {/if}
-      </span>
-    </div>
-
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-keyboard"></i> Keyboard Shortcut</h2>
-      <div class="anki-status-area">
-        <div class="status-indicator-box">
-          <span class="status-label">Look up selection:</span>
-          <span class="badge badge-connected">{shortcutLabel}</span>
-        </div>
-      </div>
-      <span class="field-hint">Select a word on any page and press this shortcut to look it up — a faster alternative to right-clicking. Change it any time from your browser's extension shortcuts settings.</span>
-    </div>
-
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-text-height"></i> Card Appearance</h2>
-      <div class="form-group">
-        <label for="select-card-font-size">Font Size</label>
-        <select id="select-card-font-size" bind:value={cardFontSize} onchange={() => void save(true)}>
-          <option value="small">Small</option>
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
-          <option value="xlarge">Extra Large</option>
-        </select>
-        <span class="field-hint">Controls the text size of the lookup card shown on the page when you look up a word.</span>
-      </div>
-    </div>
-
-    {#if lookupMode === 'ai'}
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-robot"></i> AI Provider</h2>
-
-      <div class="form-group">
-        <label for="select-llm-provider">Provider</label>
-        <select
-          id="select-llm-provider"
-          bind:value={provider}
-          onchange={() => void save(true)}
-        >
-          <option value="hackclub">Hack Club AI (Free)</option>
-          <option value="openrouter">OpenRouter (Bring your own key)</option>
-        </select>
-      </div>
-
-      {#if provider === 'hackclub'}
-        <div class="provider-fields">
-          <div class="form-group">
-            <div class="label-row">
-              <label for="input-hackclub-key">Hack Club AI API Key <span class="required">*</span></label>
-              <a href="https://ai.hackclub.com/dashboard" target="_blank" class="help-link">Get Free Key (for teens)<i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-            </div>
-            <div class="input-wrapper">
-              <input id="input-hackclub-key" type="password" placeholder="paste your hc_... key here" bind:this={hcKeyEl} bind:value={hackclubApiKey} oninput={scheduleSave} />
-              <button type="button" class="toggle-password-btn" title="Show key" aria-label="Toggle key visibility" onclick={() => togglePassword(hcKeyEl)}><i class="fa-solid fa-eye"></i></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="input-hackclub-model">Model</label>
-            <input id="input-hackclub-model" type="text" placeholder="qwen/qwen3-32b" bind:value={hackclubModel} oninput={scheduleSave} />
-            <span class="field-hint">Any model Hack Club's proxy supports. The default works for most people.</span>
-          </div>
-        </div>
-      {:else}
-        <div class="provider-fields">
-          <div class="form-group">
-            <div class="label-row">
-              <label for="input-openrouter-key">OpenRouter API Key <span class="required">*</span></label>
-              <a href="https://openrouter.ai/keys" target="_blank" class="help-link">Get Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-            </div>
-            <div class="input-wrapper">
-              <input id="input-openrouter-key" type="password" placeholder="paste your sk-or-... key here" bind:this={orKeyEl} bind:value={openrouterApiKey} oninput={scheduleSave} />
-              <button type="button" class="toggle-password-btn" title="Show key" aria-label="Toggle key visibility" onclick={() => togglePassword(orKeyEl)}><i class="fa-solid fa-eye"></i></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="input-openrouter-model">Model</label>
-            <input id="input-openrouter-model" type="text" placeholder="meta-llama/llama-3.3-70b-instruct:free" bind:value={openrouterModel} oninput={scheduleSave} />
-            <span class="field-hint">Any <a href="https://openrouter.ai/models" target="_blank">OpenRouter model ID</a> — free-tier ones end in <code>:free</code>.</span>
-          </div>
-        </div>
-      {/if}
-
-      <div class="validation-row">
-        <button type="button" class="secondary-button" disabled={testingKey} onclick={testKey}>Test API Key</button>
-        {#if keyStatus}
-          <span class="status-msg" class:status-success={keyStatus.type === 'success'} class:status-error={keyStatus.type === 'error'}>{keyStatus.msg}</span>
+          <CircleX size={13} />
+          <span>Anki Offline</span>
         {/if}
       </div>
-      <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}. The dictionary-verified "Meaning" field is English-only — no free dictionary exists for the other languages.</span>
     </div>
-    {/if}
+  </aside>
 
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-volume-high"></i> Pronunciation Audio</h2>
-      <div class="form-group">
-        <div class="label-row">
-          <label for="input-mw-key">Merriam-Webster Key <span class="optional">(optional)</span></label>
-          <a href="https://dictionaryapi.com/" target="_blank" class="help-link">Register Key <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+  <main class="content">
+    <div class="content-inner">
+      {#if section === 'general'}
+        <header class="content-header">
+          <h1><Settings2 size={22} strokeWidth={1.75} /> General</h1>
+          <p>Core lookup behavior and how the on-page card looks.</p>
+        </header>
+
+        <div class="settings-card glass-panel">
+          <h2><BookOpen size={15} /> Lookup Mode</h2>
+          <div class="mode-toggle">
+            <button
+              type="button"
+              class="mode-btn"
+              class:active={lookupMode === 'ai'}
+              onclick={() => setLookupMode('ai')}
+            >
+              <Bot size={13} /> AI-Powered
+            </button>
+            <button
+              type="button"
+              class="mode-btn"
+              class:active={lookupMode === 'dictionary'}
+              onclick={() => setLookupMode('dictionary')}
+            >
+              <BookOpen size={13} /> Dictionary Only
+            </button>
+          </div>
+          <span class="field-hint">
+            {#if lookupMode === 'dictionary'}
+              Pulls definitions straight from a free dictionary, then you can pick the sense that fits from a dropdown when you add a word, works for english only as of now!
+            {:else}
+              An AI model reads the word's context, picks the best sense, writes a definition, and invents an example sentence. Supports {supportedLanguageNames}.
+            {/if}
+          </span>
         </div>
-        <div class="input-wrapper">
-          <input id="input-mw-key" type="password" placeholder="paste your MW Collegiate key here" bind:this={mwKeyEl} bind:value={mwKey} oninput={scheduleSave} />
-          <button type="button" class="toggle-password-btn" title="Show key" aria-label="Toggle key visibility" onclick={() => togglePassword(mwKeyEl)}><i class="fa-solid fa-eye"></i></button>
+
+        <div class="settings-card glass-panel">
+          <h2><Keyboard size={15} /> Keyboard Shortcut</h2>
+          <div class="anki-status-area">
+            <div class="status-indicator-box">
+              <span class="status-label">Look up selection:</span>
+              <span class="badge badge-connected">{shortcutLabel}</span>
+            </div>
+          </div>
+          <span class="field-hint">Select a word on any page and press this shortcut to look it up. Change it any time from your browser's extension shortcuts settings.</span>
         </div>
-        <span class="field-hint">Enables premium native US pronunciations for English words. Other supported languages always use automatic native-language pronunciation.</span>
-      </div>
-    </div>
 
-    <div class="settings-card glass-panel">
-      <h2><i class="fa-solid fa-plug"></i> Anki Integration</h2>
-      <div class="anki-status-area">
-        <div class="status-indicator-box">
-          <span class="status-label">Anki Status:</span>
-          {#if ankiStatus === 'checking'}
-            <span class="badge badge-checking"><i class="fa-solid fa-spinner fa-spin"></i> Checking...</span>
-          {:else if ankiStatus === 'connected'}
-            <span class="badge badge-connected"><i class="fa-solid fa-circle-check"></i> Connected</span>
-          {:else}
-            <span class="badge badge-offline"><i class="fa-solid fa-circle-xmark"></i> Offline</span>
-          {/if}
+        <div class="settings-card glass-panel">
+          <h2><Type size={15} /> Card Appearance</h2>
+          <div class="form-group">
+            <label for="select-card-font-size">Font Size</label>
+            <select id="select-card-font-size" bind:value={cardFontSize} onchange={() => void save(true)}>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+              <option value="xlarge">Extra Large</option>
+            </select>
+            <span class="field-hint">Controls the text size of the lookup card shown on the page when you look up a word.</span>
+          </div>
         </div>
-        <button type="button" class="secondary-button" onclick={testAnki}><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
-      </div>
+      {:else if section === 'ai'}
+        <header class="content-header">
+          <h1><Sparkles size={22} strokeWidth={1.75} /> AI Provider</h1>
+          <p>The language model that reads context and writes definitions.</p>
+        </header>
 
-      <div class="form-group">
-        <label for="select-deck">Target Deck</label>
-        <div class="input-row">
-          <select id="select-deck" class="deck-select" bind:value={deckName} onchange={() => void save(true)}>
-            {#each decks as deck}
-              <option value={deck}>{deck}</option>
-            {/each}
-          </select>
-          <button type="button" class="secondary-button" onclick={() => { dialogOpen = true; newDeckName = ''; dialogError = ''; }}><i class="fa-solid fa-plus"></i> New Deck</button>
-        </div>
-        <span class="field-hint">New vocabulary notes will be created inside this deck.</span>
-      </div>
+        {#if lookupMode !== 'ai'}
+          <div class="settings-card glass-panel empty-state">
+            <TriangleAlert size={22} strokeWidth={1.75} />
+            <p>AI-powered lookup is turned off. Switch to AI mode in General to configure a provider.</p>
+            <button type="button" class="secondary-button" onclick={goToGeneral}>Go to General</button>
+          </div>
+        {:else}
+          <div class="settings-card glass-panel">
+            <div class="form-group">
+              <label for="select-llm-provider">Provider</label>
+              <select id="select-llm-provider" bind:value={provider} onchange={() => void save(true)}>
+                <option value="hackclub">Hack Club AI</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </div>
 
-      <div class="form-group">
-        <label for="select-note-type">Note Type</label>
-        <select id="select-note-type" bind:value={noteTypeName} onchange={onNoteTypeChange}>
-          {#each noteTypes as nt}
-            <option value={nt}>{nt}{nt === DEFAULT_NOTE_TYPE_NAME ? ' (default)' : ''}</option>
-          {/each}
-        </select>
-        <span class="field-hint">
-          {#if noteTypeName === DEFAULT_NOTE_TYPE_NAME}
-            Glean manages this note type automatically — its fields and card template stay in sync.
-          {:else}
-            Using your own note type. Map Glean's data to its fields below — Word and Definition are required, everything else can be skipped.
-          {/if}
-        </span>
-      </div>
-
-      {#if noteTypeName !== DEFAULT_NOTE_TYPE_NAME}
-        <div class="provider-fields">
-          {#if loadingNoteTypeFields}
-            <span class="field-hint">Loading fields…</span>
-          {:else}
-            {#each GLEAN_FIELDS as f}
-              <div class="form-group">
-                <label for="map-{f.key}">{f.label}{f.required ? ' *' : ''}</label>
-                <select id="map-{f.key}" bind:value={fieldMapping[f.key]} onchange={() => void save(true)}>
-                  {#if !f.required}
-                    <option value="">— Don't use —</option>
-                  {/if}
-                  {#each noteTypeFields as nf}
-                    <option value={nf}>{nf}</option>
-                  {/each}
-                </select>
+            {#if provider === 'hackclub'}
+              <div class="provider-fields">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label for="input-hackclub-key">Hack Club AI API Key <span class="required">*</span></label>
+                    <a href="https://ai.hackclub.com/dashboard" target="_blank" class="help-link">Get Free Key (for teens) <ExternalLink size={10} /></a>
+                  </div>
+                  <div class="input-wrapper">
+                    <input
+                      id="input-hackclub-key"
+                      type={hcKeyVisible ? 'text' : 'password'}
+                      placeholder="paste your hc_... key here"
+                      bind:value={hackclubApiKey}
+                      oninput={scheduleSave}
+                    />
+                    <button type="button" class="toggle-password-btn" title="Toggle key visibility" aria-label="Toggle key visibility" onclick={() => (hcKeyVisible = !hcKeyVisible)}>
+                      {#if hcKeyVisible}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="input-hackclub-model">Model</label>
+                  <input id="input-hackclub-model" type="text" placeholder="qwen/qwen3-32b" bind:value={hackclubModel} oninput={scheduleSave} />
+                  <span class="field-hint">Any model Hack Club's proxy supports. The default works for most people.</span>
+                </div>
               </div>
-            {/each}
+            {:else}
+              <div class="provider-fields">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label for="input-openrouter-key">OpenRouter API Key <span class="required">*</span></label>
+                    <a href="https://openrouter.ai/keys" target="_blank" class="help-link">Get Key <ExternalLink size={10} /></a>
+                  </div>
+                  <div class="input-wrapper">
+                    <input
+                      id="input-openrouter-key"
+                      type={orKeyVisible ? 'text' : 'password'}
+                      placeholder="paste your sk-or-... key here"
+                      bind:value={openrouterApiKey}
+                      oninput={scheduleSave}
+                    />
+                    <button type="button" class="toggle-password-btn" title="Toggle key visibility" aria-label="Toggle key visibility" onclick={() => (orKeyVisible = !orKeyVisible)}>
+                      {#if orKeyVisible}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="input-openrouter-model">Model</label>
+                  <input id="input-openrouter-model" type="text" placeholder="meta-llama/llama-3.3-70b-instruct:free" bind:value={openrouterModel} oninput={scheduleSave} />
+                  <span class="field-hint">Any <a href="https://openrouter.ai/models" target="_blank">OpenRouter model ID</a>  free-tier ones end in <code>:free</code>.</span>
+                </div>
+              </div>
+            {/if}
+
+            <div class="validation-row">
+              <button type="button" class="secondary-button" disabled={testingKey} onclick={testKey}>Test API Key</button>
+              {#if keyStatus}
+                <span class="status-msg" class:status-success={keyStatus.type === 'success'} class:status-error={keyStatus.type === 'error'}>{keyStatus.msg}</span>
+              {/if}
+            </div>
+            <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}. The dictionary-verified "Meaning" field is English-only as of now!</span>
+          </div>
+        {/if}
+      {:else if section === 'audio'}
+        <header class="content-header">
+          <h1><Volume2 size={22} strokeWidth={1.75} /> Pronunciation Audio</h1>
+          <p>Where the card's pronunciation clip comes from.</p>
+        </header>
+
+        <div class="settings-card glass-panel">
+          <div class="form-group">
+            <div class="label-row">
+              <label for="input-mw-key">Merriam-Webster Key <span class="optional">(optional)</span></label>
+              <a href="https://dictionaryapi.com/" target="_blank" class="help-link">Register Key <ExternalLink size={10} /></a>
+            </div>
+            <div class="input-wrapper">
+              <input
+                id="input-mw-key"
+                type={mwKeyVisible ? 'text' : 'password'}
+                placeholder="paste your MW Collegiate key here"
+                bind:value={mwKey}
+                oninput={scheduleSave}
+              />
+              <button type="button" class="toggle-password-btn" title="Toggle key visibility" aria-label="Toggle key visibility" onclick={() => (mwKeyVisible = !mwKeyVisible)}>
+                {#if mwKeyVisible}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
+              </button>
+            </div>
+            <span class="field-hint">Enables premium native US pronunciations for English words. Other supported languages always use automatic native-language pronunciation.</span>
+          </div>
+        </div>
+      {:else if section === 'anki'}
+        <header class="content-header">
+          <h1><Plug size={22} strokeWidth={1.75} /> Anki Integration</h1>
+          <p>Where new cards go, and how Glean's data maps to your note type.</p>
+        </header>
+
+        <div class="settings-card glass-panel">
+          <div class="anki-status-area">
+            <div class="status-indicator-box">
+              <span class="status-label">Anki Status:</span>
+              {#if ankiStatus === 'checking'}
+                <span class="badge badge-checking"><LoaderCircle size={11} class="spin" /> Checking...</span>
+              {:else if ankiStatus === 'connected'}
+                <span class="badge badge-connected"><CircleCheck size={11} /> Connected</span>
+              {:else}
+                <span class="badge badge-offline"><CircleX size={11} /> Offline</span>
+              {/if}
+            </div>
+            <button type="button" class="secondary-button" onclick={testAnki}><RefreshCw size={11} /> Refresh</button>
+          </div>
+
+          <div class="form-group">
+            <label for="select-deck">Target Deck</label>
+            <div class="input-row">
+              <select id="select-deck" class="deck-select" bind:value={deckName} onchange={() => void save(true)}>
+                {#each decks as deck}
+                  <option value={deck}>{deck}</option>
+                {/each}
+              </select>
+              <button type="button" class="secondary-button" onclick={() => { dialogOpen = true; newDeckName = ''; dialogError = ''; }}><Plus size={11} /> New Deck</button>
+            </div>
+            <span class="field-hint">New vocabulary notes will be created inside this deck.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="select-note-type">Note Type</label>
+            <select id="select-note-type" bind:value={noteTypeName} onchange={onNoteTypeChange}>
+              {#each noteTypes as nt}
+                <option value={nt}>{nt}{nt === DEFAULT_NOTE_TYPE_NAME ? ' (default)' : ''}</option>
+              {/each}
+            </select>
+            <span class="field-hint">
+              {#if noteTypeName === DEFAULT_NOTE_TYPE_NAME}
+                Glean manages this note type automatically, its fields and card template stay in sync.
+              {:else}
+                Using your own note type. Map Glean's data to its fields below, Word and Definition are required, everything else can be skipped.
+              {/if}
+            </span>
+          </div>
+
+          {#if noteTypeName !== DEFAULT_NOTE_TYPE_NAME}
+            <div class="provider-fields">
+              {#if loadingNoteTypeFields}
+                <span class="field-hint">Loading fields…</span>
+              {:else}
+                {#each GLEAN_FIELDS as f}
+                  <div class="form-group">
+                    <label for="map-{f.key}">{f.label}{f.required ? ' *' : ''}</label>
+                    <select id="map-{f.key}" bind:value={fieldMapping[f.key]} onchange={() => void save(true)}>
+                      {#if !f.required}
+                        <option value="">- Don't use -</option>
+                      {/if}
+                      {#each noteTypeFields as nf}
+                        <option value={nf}>{nf}</option>
+                      {/each}
+                    </select>
+                  </div>
+                {/each}
+              {/if}
+            </div>
           {/if}
         </div>
-      {/if}
-    </div>
+      {:else if section === 'danger'}
+        <header class="content-header">
+          <h1><TriangleAlert size={22} strokeWidth={1.75} /> Danger Zone</h1>
+          <p>Irreversible actions. Proceed with care.</p>
+        </header>
 
-    <div class="settings-card danger-card glass-panel">
-      <h2><i class="fa-solid fa-trash"></i> Danger Zone</h2>
-      <p class="section-desc">Reset all extension configurations to defaults.</p>
-      <button type="button" class="danger-button" onclick={reset}><i class="fa-solid fa-trash"></i> Reset All Configurations</button>
+        <div class="settings-card danger-card glass-panel">
+          <h2><Trash2 size={15} /> Reset Everything</h2>
+          <p class="section-desc">Wipes all extension configuration from API keys, deck selection, note type mapping, back to defaults. Cards already added to Anki are unaffected.</p>
+          <button type="button" class="danger-button" onclick={reset}><Trash2 size={12} /> Reset All Configurations</button>
+        </div>
+      {/if}
     </div>
   </main>
-
-  <div class="toast" class:show={toastVisible}>Settings saved automatically</div>
 </div>
+
+<div class="toast" class:show={toastVisible}>Settings saved automatically</div>
 
 {#if dialogOpen}
   <div class="dialog-overlay">
     <div class="dialog glass-panel">
-      <h3>Create New Deck</h3>
+      <div class="dialog-header">
+        <h3>Create New Deck</h3>
+        <button type="button" class="dialog-close" aria-label="Close" onclick={() => (dialogOpen = false)}><X size={14} /></button>
+      </div>
       <input type="text" placeholder="e.g., French Vocab" bind:value={newDeckName} onkeydown={(e) => e.key === 'Enter' && createDeck()} />
       {#if dialogError}<span class="status-msg status-error">{dialogError}</span>{/if}
       <div class="dialog-actions">
