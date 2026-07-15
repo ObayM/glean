@@ -1,46 +1,36 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { browser } from 'wxt/browser';
-  import GlassFilter from '../../components/GlassFilter.svelte';
+  import GlassPanel from '../../components/GlassPanel.svelte';
   import { DEFAULT_FIELD_MAPPING, DEFAULT_NOTE_TYPE_NAME, GLEAN_FIELDS } from '../../lib/anki-connect';
   import type { GleanFieldKey } from '../../lib/anki-connect';
   import { TRIGGER_COMMAND_ID } from '../../lib/constants';
   import { SUPPORTED_LANGUAGES } from '../../lib/languages';
   import { getDefaultModel } from '../../lib/llm-api';
-  import { initLiquidGlass } from '../../lib/liquid-glass';
   import { sendMessage } from '../../lib/messaging';
   import { getSettings, setSettings } from '../../lib/storage';
   import type { CardFontSize, LlmProvider, LookupMode } from '../../lib/types';
   import {
-    Bot,
-    BookOpen,
     CircleCheck,
     CircleX,
     ExternalLink,
     Eye,
     EyeOff,
-    Keyboard,
     LoaderCircle,
-    Plug,
     Plus,
     RefreshCw,
-    Settings2,
-    Sparkles,
     Trash2,
     TriangleAlert,
-    Type,
-    Volume2,
     X,
   } from '@lucide/svelte';
 
-  type Section = 'general' | 'ai' | 'audio' | 'anki' | 'danger';
+  type Section = 'general' | 'ai' | 'audio' | 'anki';
 
-  const NAV: { id: Section; label: string; icon: typeof Settings2 }[] = [
-    { id: 'general', label: 'General', icon: Settings2 },
-    { id: 'ai', label: 'AI Provider', icon: Sparkles },
-    { id: 'audio', label: 'Pronunciation Audio', icon: Volume2 },
-    { id: 'anki', label: 'Anki Integration', icon: Plug },
-    { id: 'danger', label: 'Danger Zone', icon: TriangleAlert },
+  const NAV: { id: Section; label: string }[] = [
+    { id: 'general', label: 'General' },
+    { id: 'ai', label: 'AI Provider' },
+    { id: 'audio', label: 'Pronunciation Audio' },
+    { id: 'anki', label: 'Anki Integration' },
   ];
 
   const supportedLanguageNames = SUPPORTED_LANGUAGES.map((l) => l.label).join(', ');
@@ -82,7 +72,6 @@
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(async () => {
-    initLiquidGlass();
     const s = await getSettings();
     lookupMode = s.lookupMode;
     provider = s.llmProvider;
@@ -260,10 +249,8 @@
   }
 </script>
 
-<GlassFilter />
-
 <div class="settings-shell">
-  <aside class="sidebar glass-panel">
+  <GlassPanel class="sidebar" radius={0}>
     <div class="sidebar-brand">
       <img src="/icons/icon48.png" alt="" class="brand-icon" />
       <div class="brand-text">
@@ -278,10 +265,8 @@
           type="button"
           class="nav-item"
           class:active={section === item.id}
-          class:danger={item.id === 'danger'}
           onclick={() => (section = item.id)}
         >
-          <item.icon size={16} strokeWidth={1.75} />
           {item.label}
         </button>
       {/each}
@@ -301,83 +286,93 @@
         {/if}
       </div>
     </div>
-  </aside>
+  </GlassPanel>
 
   <main class="content">
     <div class="content-inner">
       {#if section === 'general'}
         <header class="content-header">
-          <h1><Settings2 size={22} strokeWidth={1.75} /> General</h1>
+          <h1>General</h1>
           <p>Core lookup behavior and how the on-page card looks.</p>
         </header>
 
-        <div class="settings-card glass-panel">
-          <h2><BookOpen size={15} /> Lookup Mode</h2>
-          <div class="mode-toggle">
-            <button
-              type="button"
-              class="mode-btn"
-              class:active={lookupMode === 'ai'}
-              onclick={() => setLookupMode('ai')}
-            >
-              <Bot size={13} /> AI-Powered
-            </button>
-            <button
-              type="button"
-              class="mode-btn"
-              class:active={lookupMode === 'dictionary'}
-              onclick={() => setLookupMode('dictionary')}
-            >
-              <BookOpen size={13} /> Dictionary Only
-            </button>
-          </div>
-          <span class="field-hint">
-            {#if lookupMode === 'dictionary'}
-              Pulls definitions straight from a free dictionary, then you can pick the sense that fits from a dropdown when you add a word, works for english only as of now!
-            {:else}
-              An AI model reads the word's context, picks the best sense, writes a definition, and invents an example sentence. Supports {supportedLanguageNames}.
-            {/if}
-          </span>
-        </div>
+        <GlassPanel class="settings-card settings-stack">
+          <section class="settings-section">
+            <h2>Lookup Mode</h2>
+            <div class="mode-toggle">
+              <button
+                type="button"
+                class="mode-btn"
+                class:active={lookupMode === 'ai'}
+                onclick={() => setLookupMode('ai')}
+              >
+                AI-Powered
+              </button>
+              <button
+                type="button"
+                class="mode-btn"
+                class:active={lookupMode === 'dictionary'}
+                onclick={() => setLookupMode('dictionary')}
+              >
+                Dictionary Only
+              </button>
+            </div>
+            <span class="field-hint">
+              {#if lookupMode === 'dictionary'}
+                Uses a free English dictionary and lets you choose the right sense before adding the card.
+              {:else}
+                Uses context to write a definition and example. Supports {supportedLanguageNames}.
+              {/if}
+            </span>
+          </section>
 
-        <div class="settings-card glass-panel">
-          <h2><Keyboard size={15} /> Keyboard Shortcut</h2>
-          <div class="anki-status-area">
-            <div class="status-indicator-box">
-              <span class="status-label">Look up selection:</span>
+          <section class="settings-section">
+            <h2>Keyboard Shortcut</h2>
+            <div class="shortcut-row">
+              <span>Look up selection</span>
               <span class="badge badge-connected">{shortcutLabel}</span>
             </div>
-          </div>
-          <span class="field-hint">Select a word on any page and press this shortcut to look it up. Change it any time from your browser's extension shortcuts settings.</span>
-        </div>
+            <span class="field-hint">Select a word on any page and press this shortcut. Change it from your browser's extension shortcuts settings.</span>
+          </section>
 
-        <div class="settings-card glass-panel">
-          <h2><Type size={15} /> Card Appearance</h2>
-          <div class="form-group">
-            <label for="select-card-font-size">Font Size</label>
-            <select id="select-card-font-size" bind:value={cardFontSize} onchange={() => void save(true)}>
-              <option value="small">Small</option>
-              <option value="medium">Medium</option>
-              <option value="large">Large</option>
-              <option value="xlarge">Extra Large</option>
-            </select>
-            <span class="field-hint">Controls the text size of the lookup card shown on the page when you look up a word.</span>
-          </div>
-        </div>
+          <section class="settings-section">
+            <h2>Card Appearance</h2>
+            <div class="form-group">
+              <label for="select-card-font-size">Font Size</label>
+              <select id="select-card-font-size" bind:value={cardFontSize} onchange={() => void save(true)}>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="xlarge">Extra Large</option>
+              </select>
+              <span class="field-hint">Controls the text size of the lookup card shown on the page.</span>
+            </div>
+          </section>
+
+          <section class="settings-section danger-section">
+            <div class="danger-heading">
+              <h2>Danger Zone</h2>
+              <p>Irreversible actions. Proceed with care.</p>
+            </div>
+            <h3>Reset Everything</h3>
+            <p class="section-desc">Wipes all extension configuration from API keys, deck selection, and note type mapping back to defaults. Cards already added to Anki are unaffected.</p>
+            <button type="button" class="danger-button" onclick={reset}><Trash2 size={12} /> Reset All Configurations</button>
+          </section>
+        </GlassPanel>
       {:else if section === 'ai'}
         <header class="content-header">
-          <h1><Sparkles size={22} strokeWidth={1.75} /> AI Provider</h1>
+          <h1>AI Provider</h1>
           <p>The language model that reads context and writes definitions.</p>
         </header>
 
         {#if lookupMode !== 'ai'}
-          <div class="settings-card glass-panel empty-state">
+          <GlassPanel class="settings-card empty-state">
             <TriangleAlert size={22} strokeWidth={1.75} />
             <p>AI-powered lookup is turned off. Switch to AI mode in General to configure a provider.</p>
             <button type="button" class="secondary-button" onclick={goToGeneral}>Go to General</button>
-          </div>
+          </GlassPanel>
         {:else}
-          <div class="settings-card glass-panel">
+          <GlassPanel class="settings-card">
             <div class="form-group">
               <label for="select-llm-provider">Provider</label>
               <select id="select-llm-provider" bind:value={provider} onchange={() => void save(true)}>
@@ -447,15 +442,15 @@
               {/if}
             </div>
             <span class="field-hint">Glean auto-detects the word's language and writes the definition in that language. Supported: {supportedLanguageNames}. The dictionary-verified "Meaning" field is English-only as of now!</span>
-          </div>
+          </GlassPanel>
         {/if}
       {:else if section === 'audio'}
         <header class="content-header">
-          <h1><Volume2 size={22} strokeWidth={1.75} /> Pronunciation Audio</h1>
+          <h1>Pronunciation Audio</h1>
           <p>Where the card's pronunciation clip comes from.</p>
         </header>
 
-        <div class="settings-card glass-panel">
+        <GlassPanel class="settings-card">
           <div class="form-group">
             <div class="label-row">
               <label for="input-mw-key">Merriam-Webster Key <span class="optional">(optional)</span></label>
@@ -475,14 +470,14 @@
             </div>
             <span class="field-hint">Enables premium native US pronunciations for English words. Other supported languages always use automatic native-language pronunciation.</span>
           </div>
-        </div>
+        </GlassPanel>
       {:else if section === 'anki'}
         <header class="content-header">
-          <h1><Plug size={22} strokeWidth={1.75} /> Anki Integration</h1>
+          <h1>Anki Integration</h1>
           <p>Where new cards go, and how Glean's data maps to your note type.</p>
         </header>
 
-        <div class="settings-card glass-panel">
+        <GlassPanel class="settings-card">
           <div class="anki-status-area">
             <div class="status-indicator-box">
               <span class="status-label">Anki Status:</span>
@@ -547,28 +542,17 @@
               {/if}
             </div>
           {/if}
-        </div>
-      {:else if section === 'danger'}
-        <header class="content-header">
-          <h1><TriangleAlert size={22} strokeWidth={1.75} /> Danger Zone</h1>
-          <p>Irreversible actions. Proceed with care.</p>
-        </header>
-
-        <div class="settings-card danger-card glass-panel">
-          <h2><Trash2 size={15} /> Reset Everything</h2>
-          <p class="section-desc">Wipes all extension configuration from API keys, deck selection, note type mapping, back to defaults. Cards already added to Anki are unaffected.</p>
-          <button type="button" class="danger-button" onclick={reset}><Trash2 size={12} /> Reset All Configurations</button>
-        </div>
+        </GlassPanel>
       {/if}
     </div>
   </main>
 </div>
 
-<div class="toast" class:show={toastVisible}>Settings saved automatically</div>
+<GlassPanel class="toast {toastVisible ? 'show' : ''}" radius={20}>Settings saved automatically</GlassPanel>
 
 {#if dialogOpen}
   <div class="dialog-overlay">
-    <div class="dialog glass-panel">
+    <GlassPanel class="dialog">
       <div class="dialog-header">
         <h3>Create New Deck</h3>
         <button type="button" class="dialog-close" aria-label="Close" onclick={() => (dialogOpen = false)}><X size={14} /></button>
@@ -579,6 +563,6 @@
         <button class="dialog-btn cancel" onclick={() => (dialogOpen = false)}>Cancel</button>
         <button class="dialog-btn confirm" disabled={creating} onclick={createDeck}>{creating ? 'Creating...' : 'Create'}</button>
       </div>
-    </div>
+    </GlassPanel>
   </div>
 {/if}

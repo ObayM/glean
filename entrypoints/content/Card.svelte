@@ -7,7 +7,7 @@
   import { cleanWord, wordTokens } from '../../lib/selection';
   import type { DictionaryLookup, LookupMode, WordData } from '../../lib/types';
   import { draggable } from './interactions';
-  import { LiquidGlassRenderer } from './liquid-glass/renderer';
+  import { LiquidGlassRenderer } from '../../lib/liquid-glass-gl/renderer';
 
   interface Props {
     word?: string;

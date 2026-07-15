@@ -6,6 +6,16 @@
   import { sendMessage } from '../../lib/messaging';
   import { getHistory, getSettings } from '../../lib/storage';
   import type { RecentWord } from '../../lib/types';
+  import {
+    BookOpen,
+    ChevronDown,
+    Clock3,
+    Folder,
+    Plug,
+    Settings,
+    TriangleAlert,
+    Zap,
+  } from '@lucide/svelte';
 
   let connected = $state<boolean | null>(null);
   let connectionText = $state('Checking...');
@@ -74,14 +84,14 @@
       <span class="logo-text">Glean</span>
     </div>
     <button class="icon-button" title="Open Settings" onclick={openOptions} aria-label="Open Settings">
-      <i class="fa-solid fa-gear"></i>
+      <Settings strokeWidth={1.9} />
     </button>
   </header>
 
   <main class="main-content">
     <section class="status-card glass-panel">
       <div class="status-row">
-        <span class="status-label"><i class="fa-solid fa-plug"></i> Anki Connection</span>
+        <span class="status-label"><Plug strokeWidth={1.9} /> Anki Connection</span>
         <div class="status-indicator">
           <span
             class="dot"
@@ -93,7 +103,7 @@
         </div>
       </div>
       <div class="status-row">
-        <span class="status-label"><i class="fa-solid fa-folder"></i> Target Deck</span>
+        <span class="status-label"><Folder strokeWidth={1.9} /> Target Deck</span>
         <span class="deck-badge">{deckName}</span>
       </div>
     </section>
@@ -103,12 +113,12 @@
         <h3 class="card-title">Today's Activity</h3>
         <div class="stats-grid">
           <div class="stat-box">
-            <i class="fa-solid fa-bolt stat-icon"></i>
+            <Zap class="stat-icon" strokeWidth={1.9} />
             <span class="stat-number">{todayCount}</span>
             <span class="stat-label">Added Today</span>
           </div>
           <div class="stat-box">
-            <i class="fa-solid fa-book stat-icon"></i>
+            <BookOpen class="stat-icon" strokeWidth={1.9} />
             <span class="stat-number">{totalCount}</span>
             <span class="stat-label">Total Added</span>
           </div>
@@ -132,8 +142,8 @@
                 onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle(index)}
               >
                 <span class="recent-word">{item.word}</span>
-                <span class="recent-time"><i class="fa-regular fa-clock"></i> {formatRelativeTime(item.timestamp)}</span>
-                <i class="fa-solid fa-chevron-down recent-chevron"></i>
+                <span class="recent-time"><Clock3 size={10} strokeWidth={1.9} /> {formatRelativeTime(item.timestamp)}</span>
+                <ChevronDown class="recent-chevron" strokeWidth={1.9} />
               </div>
               <div class="recent-details">
                 {#if item.meaning}
@@ -167,7 +177,7 @@
 
     {#if setupNeeded}
       <section class="setup-prompt glass-panel">
-        <div class="setup-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="setup-icon"><TriangleAlert strokeWidth={1.9} /></div>
         <h3>API Key Required</h3>
         <p>You need to enter your Hack Club AI key to use Glean.</p>
         <button class="primary-button" onclick={openOptions}>Setup Now</button>
