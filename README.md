@@ -11,17 +11,19 @@
 
 ![demo](./assets/demo.gif)
 
-Glean doesn't touch Anki's files directly. It runs entirely as a Chrome extension: a content script watches for a highlighted or right-clicked word, hands the surrounding sentence to a background service worker, which detects the word's language and asks an AI for a context-matched definition and example in that language, grabs pronunciation audio from whichever source actually has the word, and posts the finished note to your local Anki through the [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on. Anki itself never has to know Glean exists.
+Glean doesn't touch Anki's files directly. It runs as a Chrome extension: highlight or right-click a word, and a little lookup card pops up without losing your place on the page. It works on regular sites and falls back to the selected text for pages where the surrounding sentence isn't available, like browser PDFs.
+
+You can look words up in two ways. **AI-Powered** mode hands the word and its surrounding sentence to your chosen AI provider for a context-matched definition and example. **Dictionary Only** mode needs no AI or API key, pulls the available English senses from the Free Dictionary API, and lets you pick the one you actually meant. Either way, Glean grabs pronunciation audio and posts the finished note to your local Anki through the [AnkiConnect](https://foosoft.net/projects/anki-connect/) add-on. Anki itself never has to know Glean exists.
 
 This runs on Chrome and any other Chromium-based browser (Edge, Brave, Arc, and so on) that supports Manifest V3. See below for the state of things elsewhere.
 
 ## Languages
 
-Glean auto-detects the language of whatever word you look up and writes both the definition and the example sentence *in that language* - no translation, no picking a deck per language first. It's currently tuned for **English, German, French, Spanish, Italian, Portuguese, and Dutch**.
+In AI-Powered mode, Glean auto-detects the language of whatever word you look up and writes both the definition and the example sentence *in that language* - no translation, no picking a deck per language first. It's currently tuned for **English, German, French, Spanish, Italian, Portuguese, and Dutch**. Dictionary Only mode is English-only for now.
 
 Pronunciation follows the same detection: English goes through Merriam-Webster (if you've added a key) or the Free Dictionary API, and everything else gets native-language audio via Google Translate's TTS endpoint.
 
-English words also get a second field, **Meaning** - the AI picks the single best-fitting sense from the word's real [Free Dictionary API](https://dictionaryapi.dev/) entry, separate from the **Definition** field it writes itself for the specific sentence you looked the word up in. There's no equivalent free dictionary for the other six languages, so `Meaning` stays empty for those and you just get the AI's own definition and example.
+In AI-Powered mode, English words also get a second field, **Meaning** - the AI picks the single best-fitting sense from the word's real [Free Dictionary API](https://dictionaryapi.dev/) entry, separate from the **Definition** field it writes itself for the specific sentence you looked the word up in. There's no equivalent free dictionary for the other six languages, so `Meaning` stays empty for those and you just get the AI's own definition and example. In Dictionary Only mode, the sense you pick becomes the card's definition.
 
 ## Installation
 
@@ -47,19 +49,15 @@ Then, in Anki:
 1. Go to **Tools > Add-ons > Get Add-ons...** and enter the code `2055492159`.
 2. Restart Anki. AnkiConnect now listens on `http://127.0.0.1:8765` whenever Anki is open.
 
-Glean will open its onboarding wizard on first install - it'll walk you through getting a free [Hack Club AI](https://ai.hackclub.com/dashboard) key (required, for definitions) and a free [Merriam-Webster](https://dictionaryapi.com/) key (optional, for nicer pronunciation audio).
+Glean will open its onboarding wizard on first install. You can choose Dictionary Only and get going without an API key, or choose AI-Powered and connect [Hack Club AI](https://ai.hackclub.com/dashboard) or [OpenRouter](https://openrouter.ai/keys). A free [Merriam-Webster](https://dictionaryapi.com/) key is optional if you want nicer English pronunciation audio.
 
 ### But nothing happens when I click "Add to Anki"!
 
 This almost always means Anki isn't open, or AnkiConnect isn't installed. Glean talks to `http://127.0.0.1:8765`, which only exists while Anki is running with the add-on active - there's no cloud fallback. Open Anki, wait a second for AnkiConnect to bind the port, and try again. The extension's popup shows a live **Anki Connection** status if you want to confirm before you start highlighting words.
 
-### But my key won't verify!
-
-Hack Club AI keys are free but rate-limited and occasionally slow to provision - give it a minute after generating one. If it still fails, hit **Test API Key** on the options page to see the actual error instead of guessing.
-
 ## Development
 
-Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run dev` starts a live-reloading dev build, `npm run build` produces `.output/chrome-mv3/`, and `npm run check` runs the type and Svelte diagnostics (kept at zero). WXT generates the manifest, so you won't find one in the repo root - it lands in `.output`. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
+Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run dev` starts a live-reloading dev build, `npm test` runs the Vitest suite, `npm run check` runs the type and Svelte diagnostics, and `npm run build` produces `.output/chrome-mv3/`. WXT generates the manifest, so you won't find one in the repo root - it lands in `.output`. The service worker's console lives behind "Inspect views: service worker" on the extensions page; the content script just uses normal page DevTools.
 
 ## Other browsers
 
@@ -68,7 +66,7 @@ Glean is built with [WXT](https://wxt.dev), Svelte 5, and TypeScript. `npm run d
 
 ## Customization
 
-Open the extension's options page (`chrome://extensions` > Glean > Details > Extension options) to manage your API keys and target deck. Everything is stored locally in `chrome.storage.local` - there's no account, no sync, and no server keeping a copy of your words.
+Open the extension's options page (`chrome://extensions` > Glean > Details > Extension options) to switch lookup modes, manage your AI and audio keys, choose or create the target deck, check the lookup shortcut, and change the on-page card's font size. Settings save automatically.
 
 Hack Club AI is the default because it's free and needs no setup beyond an email, but if you'd rather bring your own key, switch **AI Provider** to **OpenRouter** on the options page and paste in an [OpenRouter](https://openrouter.ai/keys) key instead. Both providers let you type in any model ID they support (there's a sensible default pre-filled for each, so you don't have to) - OpenRouter in particular has a bunch of free-tier models (their IDs end in `:free`) if you want to experiment without spending anything.
 
@@ -77,7 +75,7 @@ If you want to change how the actual flashcard looks in Anki, that lives in one 
 ## Credits
 
 - [Anki](https://apps.ankiweb.net/) and [AnkiConnect](https://foosoft.net/projects/anki-connect/) for making a local flashcard API possible at all.
-- [Hack Club AI](https://ai.hackclub.com/) for a free AI (only for teens) and [OpenRouter](https://openrouter.ai/) for the bring-your-own-key alternative.
+- [Hack Club AI](https://ai.hackclub.com/) for a free AI (only for teens) 
 - [Free Dictionary API](https://dictionaryapi.dev/) and [Merriam-Webster](https://dictionaryapi.com/) for pronunciation audio and (for English) dictionary-verified definitions.
 - Google Translate's text-to-speech endpoint for pronunciation audio in every supported language besides English.
 - Claude for being a good assistant.
