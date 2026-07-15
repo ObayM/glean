@@ -7,28 +7,7 @@ const CARD_TEMPLATE_NAME = 'Glean Card';
 
 export const DEFAULT_NOTE_TYPE_NAME = 'Glean Vocab';
 
-export type GleanFieldKey =
-  | 'word'
-  | 'meaning'
-  | 'definition'
-  | 'sentence'
-  | 'example'
-  | 'sound'
-  | 'image'
-  | 'sourceUrl';
-
-export const GLEAN_FIELDS: { key: GleanFieldKey; label: string; required: boolean }[] = [
-  { key: 'word', label: 'Word', required: true },
-  { key: 'definition', label: 'Definition', required: true },
-  { key: 'meaning', label: 'Meaning', required: false },
-  { key: 'sentence', label: 'Context Sentence', required: false },
-  { key: 'example', label: 'Example', required: false },
-  { key: 'sound', label: 'Audio', required: false },
-  { key: 'image', label: 'Image', required: false },
-  { key: 'sourceUrl', label: 'Source URL', required: false },
-];
-
-export const DEFAULT_FIELD_MAPPING: Record<GleanFieldKey, string> = {
+export const DEFAULT_FIELD_MAPPING = {
   word: 'Word',
   meaning: 'Meaning',
   definition: 'Definition',
@@ -245,11 +224,11 @@ export function createDeck(name: string): Promise<number> {
   return ankiConnectRequest<number>('createDeck', { deck: name });
 }
 
-export function getModelNames(): Promise<string[]> {
+function getModelNames(): Promise<string[]> {
   return ankiConnectRequest<string[]>('modelNames');
 }
 
-export function getModelFieldNames(modelName: string): Promise<string[]> {
+function getModelFieldNames(modelName: string): Promise<string[]> {
   return ankiConnectRequest<string[]>('modelFieldNames', { modelName });
 }
 

@@ -2,8 +2,6 @@
   import { onMount } from 'svelte';
   import { browser } from 'wxt/browser';
   import GlassPanel from '../../components/GlassPanel.svelte';
-  import { DEFAULT_FIELD_MAPPING, DEFAULT_NOTE_TYPE_NAME, GLEAN_FIELDS } from '../../lib/anki-connect';
-  import type { GleanFieldKey } from '../../lib/anki-connect';
   import { TRIGGER_COMMAND_ID } from '../../lib/constants';
   import { SUPPORTED_LANGUAGES } from '../../lib/languages';
   import { getDefaultModel } from '../../lib/llm-api';
@@ -39,11 +37,6 @@
 
   let lookupMode = $state<LookupMode>('ai');
   let shortcutLabel = $state('Not set');
-  let noteTypeName = $state(DEFAULT_NOTE_TYPE_NAME);
-  let fieldMapping = $state<Record<GleanFieldKey, string>>({ ...DEFAULT_FIELD_MAPPING });
-  let noteTypes = $state<string[]>([DEFAULT_NOTE_TYPE_NAME]);
-  let noteTypeFields = $state<string[]>([]);
-  let loadingNoteTypeFields = $state(false);
   let provider = $state<LlmProvider>('hackclub');
   let hackclubApiKey = $state('');
   let hackclubModel = $state('');
@@ -81,8 +74,6 @@
     openrouterModel = s.openrouterModel || getDefaultModel('openrouter');
     mwKey = s.mwKey;
     deckName = s.deckName;
-    noteTypeName = s.noteTypeName || DEFAULT_NOTE_TYPE_NAME;
-    fieldMapping = { ...DEFAULT_FIELD_MAPPING, ...s.fieldMapping };
     cardFontSize = s.cardFontSize;
     await testAnki();
 
@@ -100,8 +91,6 @@
       openrouterModel: openrouterModel.trim(),
       mwKey: mwKey.trim(),
       deckName,
-      noteTypeName,
-      fieldMapping,
       cardFontSize,
     });
     if (notify) showToast();
@@ -152,7 +141,6 @@
     if (res.ok && res.data.connected) {
       ankiStatus = 'connected';
       await loadDecks();
-      await loadNoteTypes();
     } else {
       ankiStatus = 'offline';
     }
@@ -164,46 +152,6 @@
     const list = res.data.decks;
     if (deckName && !list.includes(deckName)) list.push(deckName);
     decks = list;
-  }
-
-  async function loadNoteTypes() {
-    const res = await sendMessage('GET_NOTE_TYPES', undefined);
-    if (!res.ok) return;
-    const list = res.data.noteTypes;
-    if (noteTypeName && !list.includes(noteTypeName)) list.push(noteTypeName);
-    noteTypes = list;
-    if (noteTypeName !== DEFAULT_NOTE_TYPE_NAME) {
-      await loadNoteTypeFields(noteTypeName);
-    }
-  }
-
-  async function loadNoteTypeFields(name: string) {
-    loadingNoteTypeFields = true;
-    const res = await sendMessage('GET_NOTE_TYPE_FIELDS', { noteTypeName: name });
-    loadingNoteTypeFields = false;
-    noteTypeFields = res.ok ? res.data.fields : [];
-  }
-
-  function guessFieldMapping(fields: string[]): Record<GleanFieldKey, string> {
-    const mapping = {} as Record<GleanFieldKey, string>;
-    for (const f of GLEAN_FIELDS) {
-      const match = fields.find(
-        (name) => name.toLowerCase() === f.key.toLowerCase() || name.toLowerCase() === f.label.toLowerCase()
-      );
-      mapping[f.key] = match ?? (f.required ? fields[0] ?? '' : '');
-    }
-    return mapping;
-  }
-
-  async function onNoteTypeChange() {
-    if (noteTypeName === DEFAULT_NOTE_TYPE_NAME) {
-      fieldMapping = { ...DEFAULT_FIELD_MAPPING };
-      noteTypeFields = [];
-    } else {
-      await loadNoteTypeFields(noteTypeName);
-      fieldMapping = guessFieldMapping(noteTypeFields);
-    }
-    await save(true);
   }
 
   async function createDeck() {
@@ -235,10 +183,7 @@
     openrouterModel = getDefaultModel('openrouter');
     mwKey = s.mwKey;
     deckName = s.deckName;
-    noteTypeName = s.noteTypeName;
-    fieldMapping = s.fieldMapping;
     cardFontSize = s.cardFontSize;
-    noteTypeFields = [];
     showToast();
   }
 
@@ -355,7 +300,7 @@
               <p>Irreversible actions. Proceed with care.</p>
             </div>
             <h3>Reset Everything</h3>
-            <p class="section-desc">Wipes all extension configuration from API keys, deck selection, and note type mapping back to defaults. Cards already added to Anki are unaffected.</p>
+            <p class="section-desc">Wipes all extension configuration, including API keys and deck selection, back to defaults. Cards already added to Anki are unaffected.</p>
             <button type="button" class="danger-button" onclick={reset}><Trash2 size={12} /> Reset All Configurations</button>
           </section>
         </GlassPanel>
@@ -474,7 +419,7 @@
       {:else if section === 'anki'}
         <header class="content-header">
           <h1>Anki Integration</h1>
-          <p>Where new cards go, and how Glean's data maps to your note type.</p>
+          <p>Choose where Glean creates new vocabulary cards.</p>
         </header>
 
         <GlassPanel class="settings-card">
@@ -505,43 +450,7 @@
             <span class="field-hint">New vocabulary notes will be created inside this deck.</span>
           </div>
 
-          <div class="form-group">
-            <label for="select-note-type">Note Type</label>
-            <select id="select-note-type" bind:value={noteTypeName} onchange={onNoteTypeChange}>
-              {#each noteTypes as nt}
-                <option value={nt}>{nt}{nt === DEFAULT_NOTE_TYPE_NAME ? ' (default)' : ''}</option>
-              {/each}
-            </select>
-            <span class="field-hint">
-              {#if noteTypeName === DEFAULT_NOTE_TYPE_NAME}
-                Glean manages this note type automatically, its fields and card template stay in sync.
-              {:else}
-                Using your own note type. Map Glean's data to its fields below, Word and Definition are required, everything else can be skipped.
-              {/if}
-            </span>
-          </div>
-
-          {#if noteTypeName !== DEFAULT_NOTE_TYPE_NAME}
-            <div class="provider-fields">
-              {#if loadingNoteTypeFields}
-                <span class="field-hint">Loading fields…</span>
-              {:else}
-                {#each GLEAN_FIELDS as f}
-                  <div class="form-group">
-                    <label for="map-{f.key}">{f.label}{f.required ? ' *' : ''}</label>
-                    <select id="map-{f.key}" bind:value={fieldMapping[f.key]} onchange={() => void save(true)}>
-                      {#if !f.required}
-                        <option value="">- Don't use -</option>
-                      {/if}
-                      {#each noteTypeFields as nf}
-                        <option value={nf}>{nf}</option>
-                      {/each}
-                    </select>
-                  </div>
-                {/each}
-              {/if}
-            </div>
-          {/if}
+          <span class="field-hint">Glean manages its <strong>Glean Vocab</strong> note type, fields, and card template automatically.</span>
         </GlassPanel>
       {/if}
     </div>

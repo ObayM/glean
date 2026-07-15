@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
-import { DEFAULT_FIELD_MAPPING, DEFAULT_NOTE_TYPE_NAME } from './anki-connect';
 import type { DictionaryDefinition } from './audio-fetcher';
+import { toCachedWord, type CachedWordData } from './cache';
 import type { LlmProvider, RecentWord, Settings, Stats, WordData } from './types';
 
 export const DEFAULT_DECK = 'Glean';
@@ -16,8 +16,6 @@ export const DEFAULT_SETTINGS: Settings = {
   openrouterModel: '',
   mwKey: '',
   deckName: DEFAULT_DECK,
-  noteTypeName: DEFAULT_NOTE_TYPE_NAME,
-  fieldMapping: DEFAULT_FIELD_MAPPING,
   cardFontSize: 'large',
 };
 
@@ -141,8 +139,8 @@ export function getCachedWord(
   model: string,
   word: string,
   sentence: string
-): Promise<WordData | null> {
-  return getLruEntry<WordData>('llmCache', llmCacheKey(provider, model, word, sentence));
+): Promise<CachedWordData | null> {
+  return getLruEntry<CachedWordData>('llmCache', llmCacheKey(provider, model, word, sentence));
 }
 
 export function putCachedWord(
@@ -152,7 +150,11 @@ export function putCachedWord(
   sentence: string,
   data: WordData
 ): Promise<void> {
-  return putLruEntry<WordData>('llmCache', llmCacheKey(provider, model, word, sentence), data);
+  return putLruEntry<CachedWordData>(
+    'llmCache',
+    llmCacheKey(provider, model, word, sentence),
+    toCachedWord(data)
+  );
 }
 
 export interface DictionaryWordData {
@@ -168,4 +170,3 @@ export function getCachedDictionaryWord(word: string): Promise<DictionaryWordDat
 export function putCachedDictionaryWord(word: string, data: DictionaryWordData): Promise<void> {
   return putLruEntry<DictionaryWordData>('dictionaryCache', word.trim().toLowerCase(), data);
 }
-

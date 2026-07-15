@@ -5,12 +5,11 @@ import {
   ensureDeck,
   ensureNoteType,
   getDeckNames,
-  getModelFieldNames,
-  getModelNames,
   testConnection,
   wordExistsInDeck,
 } from '../lib/anki-connect';
 import { fetchAudio, fetchFreeDictionaryEntry } from '../lib/audio-fetcher';
+import { restoreCachedWord } from '../lib/cache';
 import { TRIGGER_COMMAND_ID } from '../lib/constants';
 import { AppError } from '../lib/errors';
 import { escapeHtml, highlightToHtml } from '../lib/highlight';
@@ -82,7 +81,7 @@ async function handleProcessWord({ word, sentence, pageUrl }: ProcessWordInput):
   const promise = (async () => {
     const cached = await getCachedWord(provider, model, word, sentence);
     if (cached) {
-      return cached;
+      return restoreCachedWord(cached, pageUrl);
     }
 
     const dictionaryEntry = await fetchFreeDictionaryEntry(word);
@@ -141,14 +140,11 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   const { word, definition, meaning, sentence, example, language, audioUrl, pageUrl, force } = input;
   const settings = await getSettings();
   const deckName = settings.deckName || DEFAULT_DECK;
-  const noteTypeName = settings.noteTypeName || DEFAULT_NOTE_TYPE_NAME;
-  const mapping = settings.fieldMapping || DEFAULT_FIELD_MAPPING;
+  const mapping = DEFAULT_FIELD_MAPPING;
 
-  if (noteTypeName === DEFAULT_NOTE_TYPE_NAME) {
-    if (!noteTypeEnsured) {
-      await ensureNoteType();
-      noteTypeEnsured = true;
-    }
+  if (!noteTypeEnsured) {
+    await ensureNoteType();
+    noteTypeEnsured = true;
   }
   if (!ensuredDecks.has(deckName)) {
     await ensureDeck(deckName);
@@ -183,7 +179,7 @@ async function handleAddToAnki(input: AddToAnkiInput): Promise<AddToAnkiResult> 
   }
 
   const tags = ['glean', `lang-${language || 'en'}`];
-  const noteId = await addNote(deckName, noteTypeName, fields, tags, audio, Boolean(force));
+  const noteId = await addNote(deckName, DEFAULT_NOTE_TYPE_NAME, fields, tags, audio, Boolean(force));
 
   try {
     await recordAddedWord({ word, definition, meaning, sentence, example, timestamp: Date.now() });
@@ -236,23 +232,6 @@ export default defineBackground(() => {
     PLAY_AUDIO: async ({ audioUrl }) => {
       await playAudioOffscreen(audioUrl);
       return { success: true };
-    },
-    GET_NOTE_TYPES: async () => {
-      const models = await getModelNames();
-      const noteTypes = models.includes(DEFAULT_NOTE_TYPE_NAME)
-        ? models
-        : [DEFAULT_NOTE_TYPE_NAME, ...models];
-      return { noteTypes };
-    },
-    GET_NOTE_TYPE_FIELDS: async ({ noteTypeName }) => {
-      if (noteTypeName === DEFAULT_NOTE_TYPE_NAME) {
-        const models = await getModelNames();
-        if (!models.includes(DEFAULT_NOTE_TYPE_NAME)) {
-          return { fields: Object.values(DEFAULT_FIELD_MAPPING) };
-        }
-      }
-      const fields = await getModelFieldNames(noteTypeName);
-      return { fields };
     },
     CAPTURE_BACKDROP: async () => {
       const dataUrl = await browser.tabs.captureVisibleTab({ format: 'jpeg', quality: 85 });

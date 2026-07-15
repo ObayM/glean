@@ -1,8 +1,9 @@
-name: release
+name: Release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -20,27 +21,26 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm run build:firefox
+      - name: Install dependencies
+        run: npm ci
 
-      - name: package zips
+      - name: Verify tag matches package version
+        run: |
+          VERSION="$(node -p 'require("./package.json").version')"
+          test "v${VERSION}" = "${GITHUB_REF_NAME}"
+
+      - name: Type & Svelte check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build Chrome extension
+        run: npm run build
+
+      - name: Package Chrome extension
         run: |
           cd .output/chrome-mv3 && zip -r ../../glean.zip . && cd -
-          cd .output/firefox-mv2 && zip -r ../../glean-firefox-experimental.zip . && cd -
 
-      - name: read version
-        id: v
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: publish release
-        run: |
-          TAG="v${{ steps.v.outputs.version }}"
-          ASSETS="glean.zip glean-firefox-experimental.zip"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" $ASSETS --clobber
-          else
-            gh release create "$TAG" $ASSETS \
-              --title "$TAG" \
-              --notes "Automated build from ${{ github.sha }}. Firefox zip is experimental (audio not verified)."
-          fi
+      - name: Publish immutable GitHub release
+        run: gh release create "$GITHUB_REF_NAME" glean.zip --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
