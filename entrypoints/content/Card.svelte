@@ -87,7 +87,10 @@
     if (glStarted || !backdropUrl || !glCanvas) return;
     glStarted = true;
     try {
-      glRenderer = new LiquidGlassRenderer(glCanvas);
+      glRenderer = new LiquidGlassRenderer(glCanvas, {
+        tint: [1, 1, 1, 0.78],
+        shadowFactor: 0.16,
+      });
     } catch {
       glRenderer = null;
       return;

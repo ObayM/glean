@@ -12,7 +12,7 @@ export const overlayStyles = `
   }
 
   :host {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Outfit', sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: var(--glean-font-size, 16px);
     box-sizing: border-box;
   }
@@ -90,7 +90,7 @@ export const overlayStyles = `
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #8E8E93;
+    color: #636366;
     cursor: move;
     user-select: none;
   }
@@ -176,7 +176,7 @@ export const overlayStyles = `
 
   .word-phonetic {
     font-size: calc(var(--glean-font-size) * 0.6875);
-    color: #8E8E93;
+    color: #636366;
     font-family: "JetBrains Mono", monospace;
     margin-top: 4px;
   }
@@ -184,7 +184,7 @@ export const overlayStyles = `
   .meaning-text {
     font-size: calc(var(--glean-font-size) * 0.75);
     font-style: italic;
-    color: #6E6E73;
+    color: #4F4F54;
     margin-bottom: 10px;
   }
 
@@ -217,7 +217,7 @@ export const overlayStyles = `
     font-size: calc(var(--glean-font-size) * 0.625);
     font-weight: 700;
     text-transform: uppercase;
-    color: #8E8E93;
+    color: #636366;
     letter-spacing: 0.04em;
     margin-bottom: 4px;
   }
@@ -230,7 +230,7 @@ export const overlayStyles = `
 
   .context-text.italic {
     font-style: italic;
-    color: #6E6E73;
+    color: #4F4F54;
   }
 
   .context-text b {
@@ -311,7 +311,7 @@ export const overlayStyles = `
 
   .loading-text {
     font-size: calc(var(--glean-font-size) * 0.625);
-    color: #8E8E93;
+    color: #636366;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 600;
@@ -466,7 +466,7 @@ export const overlayStyles = `
 
   .pickword-hint {
     font-size: calc(var(--glean-font-size) * 0.6875);
-    color: #8E8E93;
+    color: #636366;
     margin-bottom: 10px;
     line-height: 1.4;
   }

@@ -12,6 +12,11 @@ export interface GlassLayout {
   bgScale: [number, number];
 }
 
+export interface LiquidGlassRendererOptions {
+  tint?: [number, number, number, number];
+  shadowFactor?: number;
+}
+
 function gaussianKernel(radius: number): number[] {
   const sigma = radius / 3.0;
   const kernel: number[] = [];
@@ -29,7 +34,7 @@ const BLUR_RADIUS = 18;
 const MAIN_DEFAULTS: Record<string, UniformValue> = {
   u_mergeRate: 0.05,
   u_shapeRoundness: 5,
-  u_tint: [1, 1, 1, 0.55],
+  u_tint: [1, 1, 1, 0.44],
   u_refThickness: 20,
   u_refFactor: 1.4,
   u_refDispersion: 7,
@@ -57,8 +62,10 @@ export class LiquidGlassRenderer {
   private bgReady = false;
   private blurWeights = gaussianKernel(BLUR_RADIUS);
   private layout: GlassLayout | null = null;
+  private tint: [number, number, number, number];
+  private shadowFactor: number;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options: LiquidGlassRendererOptions = {}) {
     const gl = canvas.getContext('webgl2', {
       alpha: true,
       premultipliedAlpha: false,
@@ -71,6 +78,8 @@ export class LiquidGlassRenderer {
     }
     this.gl = gl;
     this.canvas = canvas;
+    this.tint = options.tint ?? [1, 1, 1, 0.44];
+    this.shadowFactor = options.shadowFactor ?? 0;
     this.renderer = new MultiPassRenderer(gl, [
       { name: 'bgPass', shader: { vertex: VERTEX_SHADER, fragment: BG_SHADER } },
       {
@@ -142,6 +151,8 @@ export class LiquidGlassRenderer {
       },
       mainPass: {
         ...MAIN_DEFAULTS,
+        u_tint: this.tint,
+        u_shadowFactor: this.shadowFactor,
         u_mouseSpring: [w / 2, h / 2],
         u_shapeWidth: layout.shapeCssWidth,
         u_shapeHeight: layout.shapeCssHeight,

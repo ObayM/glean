@@ -238,7 +238,7 @@ vec4 computeGlass(vec2 p1, vec2 p2, float merged) {
 
   if (edgeFactor <= 0.0) {
     outColor = texture(u_blurredBg, v_uv);
-    outColor = mix(outColor, vec4(u_tint.r, u_tint.g, u_tint.b, 1.0), u_tint.a * 0.8);
+    outColor = mix(outColor, vec4(u_tint.r, u_tint.g, u_tint.b, 1.0), u_tint.a);
     outColor.a = 1.0;
     return outColor;
   }
@@ -253,7 +253,7 @@ vec4 computeGlass(vec2 p1, vec2 p2, float merged) {
     u_refDispersion
   );
 
-  outColor = mix(blurredPixel, vec4(u_tint.r, u_tint.g, u_tint.b, 1.0), u_tint.a * 0.8);
+  outColor = mix(blurredPixel, vec4(u_tint.r, u_tint.g, u_tint.b, 1.0), u_tint.a);
 
   float fresnelFactor = clamp(
     pow(1.0 + merged * u_resolution1x.y / 1500.0 * pow(500.0 / u_refFresnelRange, 2.0) + u_refFresnelHardness, 5.0),
